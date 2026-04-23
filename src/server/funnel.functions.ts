@@ -209,14 +209,14 @@ export const analyzePage = createServerFn({ method: "POST" })
         ? "Responde TODO el contenido (notas, fortalezas, oportunidades, oferta, audiencia) en español."
         : "Respond with ALL content (notes, strengths, opportunities, offer, audience) in English.";
 
-    const system = `You are a senior conversion strategist and direct-response copywriter trained on the StoryBrand framework (Donald Miller) and Russell Brunson's playbooks (DotCom Secrets, Expert Secrets, Traffic Secrets).
+    const system = `You are a senior conversion strategist and direct-response copywriter applying the HERO Method — a proprietary funnel framework focused on Headline clarity, Engagement of the right audience, Resonant offer mechanics, and Optimized calls-to-action.
 
 Your job: audit a landing/sales page HTML and return a structured score using the submit_funnel_audit tool.
 
 Scoring rubric (0-100):
 - Headline clarity (specific outcome, customer-centric)
 - Offer clarity (what they get, for whom, why now)
-- Brunson mechanics (Big Domino statement, Opportunity Switch, Epiphany Bridge)
+- Core mechanics (Big Domino statement, Opportunity Switch, Epiphany Bridge)
 - CTA strength (singular, action-driving, above the fold)
 - Trust (social proof, testimonials, guarantees)
 - Visual hierarchy
