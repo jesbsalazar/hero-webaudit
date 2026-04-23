@@ -66,7 +66,7 @@ const dict = {
     hero_eyebrow: "Auditoría gratis con IA",
     hero_title: "¿Tu página de ventas te está costando clientes?",
     hero_subtitle:
-      "Pega tu URL. En 60 segundos, nuestra IA califica tu funnel con los playbooks de StoryBrand y Russell Brunson — y te muestra una maqueta rediseñada.",
+      "Pega tu URL. En 60 segundos, nuestra IA califica tu funnel con el Método HERO — y te muestra una maqueta rediseñada.",
     url_placeholder: "https://tunegocio.com",
     analyze_btn: "Analizar mi página",
     analyzing: "Analizando…",
