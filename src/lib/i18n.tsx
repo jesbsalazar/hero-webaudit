@@ -55,6 +55,11 @@ const dict = {
     score_label_low: "Needs urgent work",
     score_label_mid: "Solid but leaking",
     score_label_high: "Strong funnel",
+    cta_pre_mockup_title: "Want a custom redesign of your page — done for you?",
+    cta_pre_mockup_sub: "Book a free 30-minute strategy call. We'll walk through your audit, show you exactly what to fix, and decide together if working with us makes sense. No pitch, no pressure.",
+    cta_pre_mockup_btn: "Book my free strategy call",
+    cta_pre_mockup_reasons: "Personalized walkthrough · Tailored fix-list · No commitment",
+    start_over: "Analyze another page",
   },
   es: {
     nav_tagline: "Analizador de Funnels",
