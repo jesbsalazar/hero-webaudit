@@ -309,7 +309,7 @@ export const generateMockup = createServerFn({ method: "POST" })
         ? "Todo el copy del HTML debe estar en español."
         : "All HTML copy must be in English.";
 
-    const system = `You are an elite landing-page designer applying StoryBrand + Russell Brunson principles. Output a SINGLE complete, self-contained HTML document (no external CSS/JS, no <script>) that redesigns a sales page.
+    const system = `You are an elite landing-page designer applying the HERO Method (clear headline, right-audience engagement, resonant offer, optimized CTA). Output a SINGLE complete, self-contained HTML document (no external CSS/JS, no <script>) that redesigns a sales page.
 
 Strict rules:
 - Use the provided brand colors as CSS custom properties.
