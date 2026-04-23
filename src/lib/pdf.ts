@@ -125,7 +125,7 @@ export async function generateAuditPDF(opts: {
   }
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(13);
-  pdf.text(isEs ? "Mecánicas Brunson" : "Brunson Mechanics", 40, y);
+  pdf.text(isEs ? "Chequeo del Método HERO" : "HERO Method Check", 40, y);
   y += 18;
   const brunson: [string, { present: boolean; note: string }][] = [
     ["Big Domino", audit.big_domino],
