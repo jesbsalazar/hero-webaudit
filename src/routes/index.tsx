@@ -131,6 +131,17 @@ function HomePage() {
     }
   };
 
+  const handleReset = () => {
+    setPhase("input");
+    setStep(0);
+    setUrl("");
+    setAuditId(null);
+    setAudit(null);
+    setMockupHtml(null);
+    setForm({ first_name: "", last_name: "", email: "" });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
