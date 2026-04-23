@@ -8,7 +8,7 @@ const dict = {
     hero_eyebrow: "Free AI-powered audit",
     hero_title: "Is your sales page costing you customers?",
     hero_subtitle:
-      "Paste your URL. In 60 seconds, our AI grades your funnel against the StoryBrand & Russell Brunson playbooks — and shows you a redesigned mockup.",
+      "Paste your URL. In 60 seconds, our AI grades your funnel with the HERO Method — and shows you a redesigned mockup.",
     url_placeholder: "https://yourbusiness.com",
     analyze_btn: "Analyze my page",
     analyzing: "Analyzing…",
