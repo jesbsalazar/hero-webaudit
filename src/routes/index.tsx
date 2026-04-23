@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Download, Calendar, Sparkles, Lock } from "lucide-react";
+import { ArrowRight, Download, Calendar, Sparkles, Lock, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -131,6 +131,17 @@ function HomePage() {
     }
   };
 
+  const handleReset = () => {
+    setPhase("input");
+    setStep(0);
+    setUrl("");
+    setAuditId(null);
+    setAudit(null);
+    setMockupHtml(null);
+    setForm({ first_name: "", last_name: "", email: "" });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -198,6 +209,36 @@ function HomePage() {
           {(phase === "report" || phase === "captured") && audit && (
             <motion.section key="report" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <AuditReport audit={audit} />
+
+              {/* Prominent CTA before the mockup */}
+              <div className="overflow-hidden rounded-2xl border-2 border-gold/50 bg-gradient-to-br from-panel-elevated via-panel to-panel-elevated p-6 shadow-2xl shadow-gold/10 md:p-8">
+                <div className="grid items-center gap-6 md:grid-cols-[1fr_auto]">
+                  <div>
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                      <Calendar className="h-3 w-3" />
+                      {t("hero_eyebrow")}
+                    </div>
+                    <h3 className="text-xl font-bold leading-tight text-foreground md:text-2xl">
+                      {t("cta_pre_mockup_title")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
+                      {t("cta_pre_mockup_sub")}
+                    </p>
+                    <p className="mt-3 text-xs font-medium text-gold/90">
+                      {t("cta_pre_mockup_reasons")}
+                    </p>
+                  </div>
+                  <a href={CALENDLY} target="_blank" rel="noopener noreferrer" className="md:justify-self-end">
+                    <Button
+                      size="lg"
+                      className="h-14 w-full bg-gold px-8 text-base font-bold text-gold-foreground shadow-lg shadow-gold/30 hover:bg-gold/90 md:w-auto"
+                    >
+                      <Calendar className="h-5 w-5" />
+                      {t("cta_pre_mockup_btn")}
+                    </Button>
+                  </a>
+                </div>
+              </div>
 
               {/* Mockup preview */}
               <div className="overflow-hidden rounded-2xl border border-gold/30 bg-panel">
@@ -303,6 +344,18 @@ function HomePage() {
                   </div>
                 </motion.div>
               )}
+
+              <div className="flex justify-center pt-2">
+                <Button
+                  onClick={handleReset}
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {t("start_over")}
+                </Button>
+              </div>
             </motion.section>
           )}
         </AnimatePresence>

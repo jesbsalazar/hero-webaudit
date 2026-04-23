@@ -65,7 +65,7 @@ export function AuditReport({ audit }: { audit: AuditJson }) {
         />
       </div>
 
-      {/* Brunson */}
+      {/* HERO Method */}
       <div className="rounded-2xl border border-border/50 bg-panel p-6">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-gold">
           {t("brunson_check")}
