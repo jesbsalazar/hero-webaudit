@@ -34,7 +34,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Get a free AI-powered audit of your sales page using StoryBrand & Russell Brunson frameworks. Score, opportunities, and a redesigned mockup in 60 seconds.",
+          "Get a free AI-powered audit of your sales page using the HERO Method. Score, opportunities, and a redesigned mockup in 60 seconds.",
       },
       { property: "og:title", content: "HERO OS — Free AI Funnel Audit" },
       {
