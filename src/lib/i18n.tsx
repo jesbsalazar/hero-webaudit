@@ -113,6 +113,11 @@ const dict = {
     score_label_low: "Requiere trabajo urgente",
     score_label_mid: "Sólido pero con fugas",
     score_label_high: "Funnel fuerte",
+    cta_pre_mockup_title: "¿Quieres un rediseño personalizado de tu página, hecho por nosotros?",
+    cta_pre_mockup_sub: "Reserva una llamada estratégica gratuita de 30 minutos. Revisamos juntos tu auditoría, te mostramos exactamente qué corregir y vemos si tiene sentido trabajar juntos. Sin venta dura, sin compromiso.",
+    cta_pre_mockup_btn: "Reservar mi llamada gratis",
+    cta_pre_mockup_reasons: "Revisión personalizada · Plan de acción a tu medida · Sin compromiso",
+    start_over: "Analizar otra página",
   },
 } as const;
 
