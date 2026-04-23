@@ -80,7 +80,7 @@ const dict = {
     target_audience: "Audiencia Objetivo",
     whats_working: "Lo que está funcionando",
     opportunities: "Áreas de oportunidad",
-    brunson_check: "Mecánicas Brunson",
+    brunson_check: "Chequeo del Método HERO",
     big_domino: "Big Domino Statement",
     opportunity_switch: "Opportunity Switch",
     epiphany_bridge: "Epiphany Bridge",
