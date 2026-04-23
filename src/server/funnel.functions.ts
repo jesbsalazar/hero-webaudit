@@ -68,7 +68,7 @@ const auditTool = {
   function: {
     name: "submit_funnel_audit",
     description:
-      "Submit a structured funnel audit using StoryBrand and Russell Brunson frameworks.",
+      "Submit a structured funnel audit using the HERO Method.",
     parameters: {
       type: "object",
       properties: {
