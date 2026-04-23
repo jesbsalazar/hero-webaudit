@@ -22,7 +22,7 @@ const dict = {
     target_audience: "Target Audience",
     whats_working: "What's working",
     opportunities: "Opportunities",
-    brunson_check: "Brunson Mechanics Check",
+    brunson_check: "HERO Method Check",
     big_domino: "Big Domino Statement",
     opportunity_switch: "Opportunity Switch",
     epiphany_bridge: "Epiphany Bridge",
