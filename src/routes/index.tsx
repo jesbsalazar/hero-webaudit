@@ -344,6 +344,18 @@ function HomePage() {
                   </div>
                 </motion.div>
               )}
+
+              <div className="flex justify-center pt-2">
+                <Button
+                  onClick={handleReset}
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  {t("start_over")}
+                </Button>
+              </div>
             </motion.section>
           )}
         </AnimatePresence>
