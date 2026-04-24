@@ -146,41 +146,115 @@ export async function generateAuditPDF(opts: {
     }
   }
 
-  // Mockup capture
+  // Mockup capture — render full page, then split across PDF pages
   if (mockupHtml) {
     try {
       const holder = document.createElement("div");
       holder.style.position = "fixed";
       holder.style.left = "-10000px";
       holder.style.top = "0";
-      holder.style.width = "900px";
+      holder.style.width = "1280px";
       holder.style.background = "#fff";
       const iframe = document.createElement("iframe");
-      iframe.style.width = "900px";
-      iframe.style.height = "1400px";
+      iframe.style.width = "1280px";
+      iframe.style.height = "800px";
       iframe.style.border = "0";
       holder.appendChild(iframe);
       document.body.appendChild(holder);
       iframe.srcdoc = mockupHtml;
-      await new Promise((r) => {
-        iframe.onload = () => setTimeout(r, 600);
+
+      await new Promise<void>((r) => {
+        iframe.onload = () => setTimeout(() => r(), 1200);
       });
+
       const doc = iframe.contentDocument!;
+      // Resize iframe to full content height so html2canvas captures everything
+      const fullHeight = Math.max(
+        doc.body.scrollHeight,
+        doc.documentElement.scrollHeight,
+        800,
+      );
+      iframe.style.height = fullHeight + "px";
+      // Wait a beat for layout + image loads
+      await new Promise((r) => setTimeout(r, 800));
+
       const canvas = await html2canvas(doc.body, {
         backgroundColor: "#fff",
-        scale: 1.2,
+        scale: 1.5,
         useCORS: true,
+        allowTaint: true,
+        windowWidth: 1280,
+        windowHeight: fullHeight,
+        width: 1280,
+        height: fullHeight,
       });
       document.body.removeChild(holder);
+
+      // Title page for the mockup
       pdf.addPage();
+      pdf.setTextColor(10, 22, 40);
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(14);
-      pdf.text(isEs ? "Maqueta rediseñada" : "Redesigned Mockup", 40, 40);
+      pdf.setFontSize(18);
+      pdf.text(isEs ? "Maqueta rediseñada" : "Redesigned Mockup", 40, 50);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(90, 110, 140);
+      pdf.text(
+        isEs
+          ? "Versión optimizada con el Método HERO basada en tu página."
+          : "HERO Method-optimized version based on your page.",
+        40,
+        68,
+      );
+
+      const marginX = 30;
+      const marginTop = 85;
+      const marginBottom = 30;
+      const targetW = W - marginX * 2;
+      const pxPerPt = canvas.width / targetW; // canvas px per PDF pt
+      const sliceMaxPt = H - marginTop - marginBottom; // first page available height
+      const sliceFollowingPt = H - 40 - marginBottom; // subsequent pages
       const imgData = canvas.toDataURL("image/jpeg", 0.85);
-      const ratio = canvas.width / canvas.height;
-      const targetW = W - 80;
-      const targetH = targetW / ratio;
-      pdf.addImage(imgData, "JPEG", 40, 60, targetW, Math.min(targetH, H - 100));
+
+      let renderedPx = 0;
+      let firstSlice = true;
+      while (renderedPx < canvas.height) {
+        const availablePt = firstSlice ? sliceMaxPt : sliceFollowingPt;
+        const sliceHeightPx = Math.min(
+          canvas.height - renderedPx,
+          Math.floor(availablePt * pxPerPt),
+        );
+
+        // Draw slice via a temp canvas
+        const tmp = document.createElement("canvas");
+        tmp.width = canvas.width;
+        tmp.height = sliceHeightPx;
+        const ctx = tmp.getContext("2d")!;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, tmp.width, tmp.height);
+        ctx.drawImage(
+          canvas,
+          0,
+          renderedPx,
+          canvas.width,
+          sliceHeightPx,
+          0,
+          0,
+          canvas.width,
+          sliceHeightPx,
+        );
+        const sliceData = tmp.toDataURL("image/jpeg", 0.85);
+        const drawHeightPt = sliceHeightPx / pxPerPt;
+        const yOffset = firstSlice ? marginTop : 40;
+        pdf.addImage(sliceData, "JPEG", marginX, yOffset, targetW, drawHeightPt);
+
+        renderedPx += sliceHeightPx;
+        firstSlice = false;
+        if (renderedPx < canvas.height) pdf.addPage();
+      }
+
+      // Avoid using imgData var (lint)
+      void imgData;
     } catch (e) {
       console.warn("mockup capture failed", e);
     }
