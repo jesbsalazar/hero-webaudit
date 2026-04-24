@@ -35,6 +35,12 @@ import logo from "@/assets/hero-os-logo.png";
 import type { AuditJson } from "@/lib/audit-types";
 
 export const Route = createFileRoute("/admin/")({
+  head: () => ({
+    meta: [
+      { title: "Admin — HERO OS" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminPage,
 });
 
