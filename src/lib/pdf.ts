@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import type { AuditJson } from "./audit-types";
 
 export async function generateAuditPDF(opts: {
@@ -149,43 +149,74 @@ export async function generateAuditPDF(opts: {
   // Mockup capture — render full page, then split across PDF pages
   if (mockupHtml) {
     try {
+      const RENDER_WIDTH = 1200;
+      const SCALE = 2; // device pixel ratio for sharp output
+
       const holder = document.createElement("div");
       holder.style.position = "fixed";
       holder.style.left = "-10000px";
       holder.style.top = "0";
-      holder.style.width = "1280px";
+      holder.style.width = RENDER_WIDTH + "px";
       holder.style.background = "#fff";
+      holder.style.zIndex = "-1";
       const iframe = document.createElement("iframe");
-      iframe.style.width = "1280px";
-      iframe.style.height = "800px";
+      iframe.style.width = RENDER_WIDTH + "px";
+      iframe.style.height = "900px";
       iframe.style.border = "0";
+      iframe.setAttribute("sandbox", "allow-same-origin");
       holder.appendChild(iframe);
       document.body.appendChild(holder);
       iframe.srcdoc = mockupHtml;
 
       await new Promise<void>((r) => {
-        iframe.onload = () => setTimeout(() => r(), 1200);
+        iframe.onload = () => r();
       });
 
       const doc = iframe.contentDocument!;
-      // Resize iframe to full content height so html2canvas captures everything
+
+      // Wait for fonts + images inside the iframe
+      try {
+        const anyDoc = doc as unknown as { fonts?: { ready?: Promise<unknown> } };
+        if (anyDoc.fonts?.ready) await anyDoc.fonts.ready;
+      } catch {
+        /* ignore */
+      }
+
+      const imgs = Array.from(doc.images);
+      await Promise.all(
+        imgs.map(
+          (img) =>
+            new Promise<void>((res) => {
+              if (img.complete && img.naturalWidth > 0) return res();
+              const done = () => res();
+              img.addEventListener("load", done, { once: true });
+              img.addEventListener("error", done, { once: true });
+              // Safety timeout per image
+              setTimeout(done, 4000);
+            }),
+        ),
+      );
+
+      // Force background images / late layout
+      await new Promise((r) => setTimeout(r, 800));
+
       const fullHeight = Math.max(
         doc.body.scrollHeight,
         doc.documentElement.scrollHeight,
-        800,
+        900,
       );
       iframe.style.height = fullHeight + "px";
-      // Wait a beat for layout + image loads
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 400));
 
-      const canvas = await html2canvas(doc.body, {
-        backgroundColor: "#fff",
-        scale: 1.5,
+      const canvas = await html2canvas(doc.documentElement, {
+        backgroundColor: "#ffffff",
+        scale: SCALE,
         useCORS: true,
         allowTaint: true,
-        windowWidth: 1280,
+        logging: false,
+        windowWidth: RENDER_WIDTH,
         windowHeight: fullHeight,
-        width: 1280,
+        width: RENDER_WIDTH,
         height: fullHeight,
       });
       document.body.removeChild(holder);
@@ -207,30 +238,29 @@ export async function generateAuditPDF(opts: {
         68,
       );
 
-      const marginX = 30;
-      const marginTop = 85;
-      const marginBottom = 30;
+      // Layout: full-bleed image, sliced across pages
+      const marginX = 24;
+      const marginTop = 88;
+      const marginBottom = 24;
       const targetW = W - marginX * 2;
       const pxPerPt = canvas.width / targetW; // canvas px per PDF pt
-      const sliceMaxPt = H - marginTop - marginBottom; // first page available height
-      const sliceFollowingPt = H - 40 - marginBottom; // subsequent pages
-      const imgData = canvas.toDataURL("image/jpeg", 0.85);
+      const firstAvailPt = H - marginTop - marginBottom;
+      const followAvailPt = H - 32 - marginBottom;
 
       let renderedPx = 0;
       let firstSlice = true;
       while (renderedPx < canvas.height) {
-        const availablePt = firstSlice ? sliceMaxPt : sliceFollowingPt;
+        const availablePt = firstSlice ? firstAvailPt : followAvailPt;
         const sliceHeightPx = Math.min(
           canvas.height - renderedPx,
           Math.floor(availablePt * pxPerPt),
         );
 
-        // Draw slice via a temp canvas
         const tmp = document.createElement("canvas");
         tmp.width = canvas.width;
         tmp.height = sliceHeightPx;
         const ctx = tmp.getContext("2d")!;
-        ctx.fillStyle = "#fff";
+        ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, tmp.width, tmp.height);
         ctx.drawImage(
           canvas,
@@ -243,18 +273,25 @@ export async function generateAuditPDF(opts: {
           canvas.width,
           sliceHeightPx,
         );
-        const sliceData = tmp.toDataURL("image/jpeg", 0.85);
+        // PNG keeps text crisp; JPEG would soften thin type
+        const sliceData = tmp.toDataURL("image/jpeg", 0.92);
         const drawHeightPt = sliceHeightPx / pxPerPt;
-        const yOffset = firstSlice ? marginTop : 40;
-        pdf.addImage(sliceData, "JPEG", marginX, yOffset, targetW, drawHeightPt);
+        const yOffset = firstSlice ? marginTop : 32;
+        pdf.addImage(
+          sliceData,
+          "JPEG",
+          marginX,
+          yOffset,
+          targetW,
+          drawHeightPt,
+          undefined,
+          "FAST",
+        );
 
         renderedPx += sliceHeightPx;
         firstSlice = false;
         if (renderedPx < canvas.height) pdf.addPage();
       }
-
-      // Avoid using imgData var (lint)
-      void imgData;
     } catch (e) {
       console.warn("mockup capture failed", e);
     }
