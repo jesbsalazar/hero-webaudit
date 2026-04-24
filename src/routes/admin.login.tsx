@@ -8,6 +8,12 @@ import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/hero-os-logo.png";
 
 export const Route = createFileRoute("/admin/login")({
+  head: () => ({
+    meta: [
+      { title: "Admin Login — HERO OS" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminLogin,
 });
 
