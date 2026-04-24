@@ -176,8 +176,8 @@ export async function generateAuditPDF(opts: {
 
       // Wait for fonts + images inside the iframe
       try {
-        // @ts-expect-error - fonts API
-        if (doc.fonts?.ready) await doc.fonts.ready;
+        const anyDoc = doc as unknown as { fonts?: { ready?: Promise<unknown> } };
+        if (anyDoc.fonts?.ready) await anyDoc.fonts.ready;
       } catch {
         /* ignore */
       }
