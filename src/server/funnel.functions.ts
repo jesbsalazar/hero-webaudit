@@ -304,28 +304,74 @@ export const generateMockup = createServerFn({ method: "POST" })
     const audit = row.audit_json as AuditJson;
     const colors = row.brand_colors as AuditJson["brand_colors"];
 
+    // Re-fetch the original page to give the designer real visual context
+    let originalSnippet = "";
+    let originalImages: string[] = [];
+    try {
+      const { html: originalHtml, finalUrl } = await fetchPage(row.url_submitted);
+      const cleaned = stripHtmlForLLM(originalHtml);
+      originalSnippet = cleaned.slice(0, 18_000);
+
+      // Extract up to 6 absolute image URLs to reuse in the mockup
+      const origin = new URL(finalUrl).origin;
+      const imgMatches = Array.from(
+        originalHtml.matchAll(/<img[^>]+src=["']([^"']+)["']/gi),
+      );
+      const seen = new Set<string>();
+      for (const m of imgMatches) {
+        let src = m[1];
+        if (src.startsWith("data:")) continue;
+        if (src.startsWith("//")) src = "https:" + src;
+        else if (src.startsWith("/")) src = origin + src;
+        else if (!/^https?:\/\//i.test(src)) continue;
+        if (!seen.has(src)) {
+          seen.add(src);
+          originalImages.push(src);
+          if (originalImages.length >= 6) break;
+        }
+      }
+    } catch (e) {
+      console.warn("re-fetch for mockup failed", e);
+    }
+
     const lang =
       data.language === "es"
-        ? "Todo el copy del HTML debe estar en español."
-        : "All HTML copy must be in English.";
+        ? "Todo el copy del HTML debe estar en español, natural y persuasivo."
+        : "All HTML copy must be in English, natural and persuasive.";
 
-    const system = `You are an elite landing-page designer applying the HERO Method (clear headline, right-audience engagement, resonant offer, optimized CTA). Output a SINGLE complete, self-contained HTML document (no external CSS/JS, no <script>) that redesigns a sales page.
+    const system = `You are an elite landing-page designer and front-end engineer. Your job is to RECREATE the look and feel of an existing page but with a stronger, HERO-Method-aligned funnel structure (clear headline, right-audience engagement, resonant offer, optimized CTA).
+
+The output MUST look like a real, polished, production-ready website — NOT a generic template.
 
 Strict rules:
-- Use the provided brand colors as CSS custom properties.
-- Mobile-first, modern, clean. System fonts only.
-- Sections in order: Hero (clear headline + subheadline + single CTA), 3 benefit cards, Social proof placeholder, Offer breakdown, FAQ (3 items), Final CTA.
-- ONE primary CTA repeated, no navigation, no external links.
-- Keep total HTML under 25KB.
-- ${lang}`;
-
-    const user = `Audit JSON:
-${JSON.stringify(audit).slice(0, 8000)}
-
-Brand colors: ${JSON.stringify(colors)}
-Original URL: ${row.url_submitted}
+- Output ONE complete, self-contained HTML document. No <script> tags, no external JS.
+- You MAY use Google Fonts via a single <link> in <head>. Pick fonts that match the original brand vibe (e.g. Inter, Poppins, Playfair, Montserrat, DM Serif, Manrope).
+- Define CSS variables in :root for the brand palette (use the provided brand colors AS-IS for primary, accent, background) plus derived neutrals.
+- Reuse the original images provided in the IMAGES list — pick the most relevant ones for hero background, product shots, logos, testimonials, etc. Use them with proper object-fit and srcset where helpful. If an image looks like a logo, use it as a logo.
+- Layout: Sticky top nav with logo + single CTA button. Sections: large Hero (image or gradient background, big headline, subheadline, primary CTA, trust strip), 3 benefit cards with icons (use inline SVG), social-proof / testimonial section with avatars from the original images if available, detailed offer / features section, FAQ (3-4 items, accordion-style with <details>), final dark CTA section, simple footer.
+- Use modern CSS: gradients, soft shadows, rounded corners (12-20px), generous spacing, responsive grid/flex, hover transitions. Mobile-first with media queries.
+- Typography: hero headline 48-72px desktop / 32-40px mobile, body 16-18px, line-height 1.5+.
+- Match the visual personality of the original (luxury, tech, friendly, bold, minimal — infer from the snippet) while improving clarity and conversion.
+- The single primary CTA text should be specific and action-driven (use audit data for context). Repeat it 3-4 times.
+- Total HTML can be up to 55KB. Make it rich and detailed, not minimal.
+- ${lang}
 
 Return ONLY raw HTML starting with <!doctype html>. No markdown fences, no explanation.`;
+
+    const user = `BRAND COLORS (use exactly): ${JSON.stringify(colors)}
+
+ORIGINAL URL: ${row.url_submitted}
+
+ORIGINAL IMAGES (absolute URLs you can reuse in <img src="...">):
+${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(none extracted — use CSS gradients and inline SVG instead)"}
+
+AUDIT INSIGHTS (offer, audience, opportunities — use to write better copy):
+${JSON.stringify(audit).slice(0, 6000)}
+
+ORIGINAL PAGE HTML SNIPPET (for tone, fonts, vocabulary, real product/brand names — extract real text, do not invent generic placeholders):
+${originalSnippet}
+
+Now produce the redesigned, realistic landing page.`;
 
     const aiRes = await callAI(system, user);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
@@ -333,7 +379,7 @@ Return ONLY raw HTML starting with <!doctype html>. No markdown fences, no expla
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) {
       throw new Error("invalid_mockup");
     }
-    if (html.length > 60_000) html = html.slice(0, 60_000);
+    if (html.length > 120_000) html = html.slice(0, 120_000);
 
     await supabaseAdmin
       .from("funnel_audits")

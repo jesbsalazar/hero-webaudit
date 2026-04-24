@@ -253,7 +253,7 @@ function HomePage() {
                       title="Redesigned mockup"
                       srcDoc={mockupHtml}
                       className="h-full w-full bg-white"
-                      sandbox=""
+                      sandbox="allow-same-origin"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
