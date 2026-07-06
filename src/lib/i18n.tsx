@@ -45,6 +45,7 @@ const dict = {
     error_generic: "Something went wrong. Please try again.",
     error_rate_limit: "Too many requests right now. Please wait a moment and retry.",
     error_credits: "AI credits exhausted. Please contact support.",
+    error_fetch_blocked: "We couldn't read this page — it may be protected by anti-bot rules or require login. Try the exact public landing URL.",
     yes: "Yes",
     no: "No",
     weak: "Weak",
