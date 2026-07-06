@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { getLeads, updateCallStatus } from "@/server/admin.functions";
+import { getLeads, updateCallStatus } from "@/lib/admin.functions";
 import { generateAuditPDF } from "@/lib/pdf";
 import logo from "@/assets/hero-os-logo.png";
 import type { AuditJson } from "@/lib/audit-types";
