@@ -17,7 +17,7 @@ import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
 
-const CALENDLY = "https://calendly.com/jsbusinesscoach/web-page-redesign";
+const CALENDLY = "https://calendly.com/jsbusinesscoach/hero-os-strategy-call";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
