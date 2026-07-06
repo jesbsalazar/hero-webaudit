@@ -230,7 +230,8 @@ export const analyzePage = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { html, finalUrl } = await fetchPage(data.url).catch((err) => {
       console.error("fetch error", err);
-      throw new Error("fetch_failed");
+      const code = (err as Error & { code?: string })?.code;
+      throw new Error(code === "fetch_blocked" ? "fetch_blocked" : "fetch_failed");
     });
 
     const cleaned = stripHtmlForLLM(html);
