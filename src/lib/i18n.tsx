@@ -104,6 +104,7 @@ const dict = {
     error_generic: "Algo salió mal. Inténtalo de nuevo.",
     error_rate_limit: "Demasiadas solicitudes. Espera un momento e intenta de nuevo.",
     error_credits: "Sin créditos de IA. Contacta a soporte.",
+    error_fetch_blocked: "No pudimos leer esta página — puede estar protegida por reglas anti-bot o requerir inicio de sesión. Prueba con la URL pública exacta de la landing.",
     yes: "Sí",
     no: "No",
     weak: "Débil",
