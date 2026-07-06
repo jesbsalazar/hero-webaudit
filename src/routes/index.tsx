@@ -17,7 +17,7 @@ import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
 
-const CALENDLY = "https://calendly.com/jsbusinesscoach/web-page-redesign";
+const CALENDLY = "https://calendly.com/jsbusinesscoach/hero-os-strategy-call";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -122,8 +122,12 @@ function HomePage() {
       const obj = URL.createObjectURL(blob);
       a.href = obj;
       a.download = `hero-os-audit-${auditId.slice(0, 8)}.pdf`;
+      a.rel = "noopener";
+      a.target = "_blank";
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(obj);
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(obj), 4000);
     } catch (e) {
       console.error(e);
       toast.error(t("error_generic"));
