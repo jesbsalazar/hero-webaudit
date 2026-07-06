@@ -14,41 +14,72 @@ const urlSchema = z
   .max(2000)
   .regex(/^https?:\/\/[^\s]+\.[^\s]+$/i, "Invalid URL");
 
-async function fetchPage(url: string): Promise<{ html: string; finalUrl: string }> {
+async function fetchDirect(url: string): Promise<{ html: string; finalUrl: string } | null> {
   const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 15000);
+  const timeout = setTimeout(() => ctrl.abort(), 12000);
   try {
     const res = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; HeroOSBot/1.0; +https://hero-os.lovable.app)",
-        Accept: "text/html,application/xhtml+xml",
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
       },
       signal: ctrl.signal,
       redirect: "follow",
     });
-    if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
-    const reader = res.body?.getReader();
-    if (!reader) {
-      const txt = await res.text();
-      return { html: txt.slice(0, 200_000), finalUrl: res.url };
-    }
-    const decoder = new TextDecoder();
-    let html = "";
-    const MAX = 600_000;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      html += decoder.decode(value, { stream: true });
-      if (html.length > MAX) {
-        html = html.slice(0, MAX);
-        break;
-      }
-    }
-    return { html, finalUrl: res.url };
+    if (!res.ok) return null;
+    const txt = await res.text();
+    return { html: txt.slice(0, 600_000), finalUrl: res.url };
+  } catch {
+    return null;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function fetchViaFirecrawl(url: string): Promise<{ html: string; finalUrl: string } | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        formats: ["html"],
+        onlyMainContent: false,
+        timeout: 30000,
+      }),
+    });
+    if (!res.ok) {
+      console.error("Firecrawl fetch failed", res.status, await res.text().catch(() => ""));
+      return null;
+    }
+    const json = (await res.json()) as {
+      data?: { html?: string; rawHtml?: string; metadata?: { sourceURL?: string; url?: string } };
+    };
+    const html = json.data?.html || json.data?.rawHtml;
+    if (!html) return null;
+    const finalUrl = json.data?.metadata?.sourceURL || json.data?.metadata?.url || url;
+    return { html: html.slice(0, 600_000), finalUrl };
+  } catch (e) {
+    console.error("Firecrawl exception", e);
+    return null;
+  }
+}
+
+async function fetchPage(url: string): Promise<{ html: string; finalUrl: string }> {
+  const direct = await fetchDirect(url);
+  if (direct && direct.html.length > 500) return direct;
+  const fc = await fetchViaFirecrawl(url);
+  if (fc) return fc;
+  const err = new Error("fetch_blocked");
+  (err as Error & { code?: string }).code = "fetch_blocked";
+  throw err;
 }
 
 function stripHtmlForLLM(html: string): string {
