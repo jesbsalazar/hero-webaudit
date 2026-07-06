@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import logo from "@/assets/hero-os-logo.png";
-import { analyzePage, generateMockup, captureLead } from "@/server/funnel.functions";
+import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions";
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
 
