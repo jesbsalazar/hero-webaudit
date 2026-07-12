@@ -1,30 +1,42 @@
-# Diagnóstico
+## Objetivo
+Reemplazar el formulario nativo de captura (nombre + email que desbloquea el mockup) por el formulario embed de ClickFunnels, manteniendo el lead vinculado a su auditoría en nuestra base de datos — sin depender de Zapier.
 
-`www.simplementerico.com` está protegida con Cloudflare "Bot Fight / Challenge" y devuelve **HTTP 403** ante cualquier `fetch` directo desde el servidor (probé con UA de bot y con UA de Chrome real — ambos bloqueados). Nuestro `fetchPage` en `src/server/funnel.functions.ts` no puede resolver el JS challenge de Cloudflare, así que nunca ve el HTML real y la auditoría falla o queda vacía.
+## Recomendación: doble envío desde el cliente (no Zapier)
 
-Esto le va a pasar con **cualquier página** detrás de Cloudflare Bot Management, Akamai, DataDome, PerimeterX, etc. — no es específico de esta URL.
+Zapier funcionaría, pero añade:
+- Otra suscripción mensual.
+- Latencia de 1–15 min entre "usuario se registra" y "aparece en tu DB".
+- Riesgo de desincronización si Zapier falla.
+- Complejidad para vincular el lead con su `audit_id` (Zapier no lo sabe).
 
-# Solución propuesta
-
-Usar **Firecrawl** como fallback (o motor principal) para el scraping. Firecrawl resuelve challenges de Cloudflare, ejecuta JS, y devuelve HTML renderizado — es el connector estándar de Lovable para esto.
+**Mejor:** al enviar el formulario de ClickFunnels, en paralelo llamamos a nuestro `captureLead` con los mismos datos + el `audit_id`. Un solo submit del usuario, dos destinos, cero drift, cero costo extra. ClickFunnels queda como la fuente de verdad del newsletter; nuestra DB conserva el vínculo lead ↔ auditoría (para mostrarle el mockup, para el PDF, y para el panel admin).
 
 ## Cambios
 
-1. **Conectar Firecrawl** (te lo pediré con el botón de connector; toma 10 segundos).
-2. **`src/server/funnel.functions.ts` → `fetchPage`**:
-   - Intentar primero `fetch` directo (rápido, gratis).
-   - Si devuelve 403/challenge/status no-OK, hacer fallback a Firecrawl `scrape` con `formats: ['html','markdown']` y `onlyMainContent: false`.
-   - Guardar `finalUrl` y el HTML devuelto por Firecrawl para el pipeline actual (auditoría + extracción de imágenes para el mockup).
-3. **Mensajes de error**: si tanto fetch como Firecrawl fallan, devolver un error i18n claro tipo *"No pudimos leer esta página (protección anti-bot). Intenta con la URL exacta de la landing o una versión sin login."* en vez del `fetch_failed` genérico actual.
-4. **Sin cambios de UI**, salvo el string de error nuevo en `src/lib/i18n.tsx`.
+### 1. Nuevo componente `ClickFunnelsForm`
+- Renderiza inputs propios (nombre, apellido, email) con nuestro estilo actual (mantiene la UI dorada sobre el mockup — un iframe/embed de CF rompería el diseño y bloquearía sandbox).
+- Al submit:
+  1. `POST` al endpoint del formulario de CF (form action URL que tú me pasarás) usando `fetch` con `mode: "no-cors"` y `application/x-www-form-urlencoded` — así CF crea el contacto y lo mete en tu newsletter/follow-up.
+  2. En paralelo, `await captureLead({ id, first_name, last_name, email })` para guardar en nuestra DB y desbloquear el mockup.
+- Si el paso 2 falla, mostramos error; si el paso 1 falla silenciosamente (no-cors no permite leer respuesta), no bloqueamos al usuario — el registro en CF se puede reconciliar después vía export.
 
-## Notas técnicas
+### 2. Configuración
+- Nueva constante `CLICKFUNNELS_FORM_ACTION` en `src/routes/index.tsx` (o en un archivo de config). Necesito de ti la **URL de acción del formulario** de ClickFunnels y los **nombres exactos de los campos** (`contact[first_name]`, `contact[email]`, etc. — varían entre CF Classic y CF 2.0).
+- Opcional: añadir campos ocultos que CF acepte como tags para segmentar estos leads como "HERO OS Audit".
 
-- Firecrawl se llama server-side leyendo `FIRECRAWL_API_KEY` de `process.env` dentro del `.handler()` — compatible con el runtime Worker de TanStack Start.
-- Uso el SDK oficial `@mendable/firecrawl-js` (una dependencia nueva).
-- Coste: 1 crédito Firecrawl por scrape que caiga en fallback; los fetch directos siguen gratis.
-- No toco el flujo de auditoría, IA, mockup, PDF ni admin.
+### 3. Sin cambios en backend
+- `funnel_audits`, `captureLead` y el flujo de mockup/PDF quedan igual.
+- No hace falta secreto ni API token de CF — el form action es público por diseño.
 
-## Alternativa que descarto
+## Lo que necesito de ti para implementar
 
-Añadir Puppeteer/Playwright en el servidor: **no funciona** en el runtime Cloudflare Worker de este proyecto (sin binarios nativos ni filesystem). Firecrawl es la ruta correcta.
+1. **URL de acción** del formulario de ClickFunnels (algo tipo `https://myfunnel.myclickfunnels.com/forms/...` o `.../submit`).
+2. **Nombres de los campos** del formulario CF (primer nombre, apellido, email). Puedes inspeccionar el form en CF con click derecho → Inspect y copiar los `name="..."`.
+3. (Opcional) Si quieres tag/segmento específico en CF, dime cuál.
+
+## Alternativa si prefieres Zapier igual
+CF form nativo (sin nuestros inputs) → Zapier webhook → nuestro server route `/api/public/clickfunnels-webhook` que hace upsert en `funnel_audits` por email. Pierdes el vínculo con `audit_id` a menos que pasemos ese ID como hidden field y Zapier lo reenvíe. Puedo hacerlo, pero es más frágil.
+
+---
+
+Confírmame el enfoque y pásame la URL + campos del form de CF, y lo implemento.
