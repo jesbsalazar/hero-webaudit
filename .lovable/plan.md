@@ -1,42 +1,69 @@
-## Objetivo
-Reemplazar el formulario nativo de captura (nombre + email que desbloquea el mockup) por el formulario embed de ClickFunnels, manteniendo el lead vinculado a su auditoría en nuestra base de datos — sin depender de Zapier.
+## Por qué Lovable no tiene "conector Zapier" y qué hacemos en su lugar
 
-## Recomendación: doble envío desde el cliente (no Zapier)
+Zapier no es un servicio con una API única; es una plataforma que conecta dos aplicaciones. En Lovable podemos consumir cualquiera de los dos extremos:
 
-Zapier funcionaría, pero añade:
-- Otra suscripción mensual.
-- Latencia de 1–15 min entre "usuario se registra" y "aparece en tu DB".
-- Riesgo de desincronización si Zapier falla.
-- Complejidad para vincular el lead con su `audit_id` (Zapier no lo sabe).
+- **Recibir un webhook de Zapier** → creamos un endpoint `/api/public/clickfunnels-webhook` y tu Zap de ClickFunnels lo llama.
+- **Llamar directamente a ClickFunnels** → nuestro backend usa la API oficial de CF 2.0, sin intermediarios.
 
-**Mejor:** al enviar el formulario de ClickFunnels, en paralelo llamamos a nuestro `captureLead` con los mismos datos + el `audit_id`. Un solo submit del usuario, dos destinos, cero drift, cero costo extra. ClickFunnels queda como la fuente de verdad del newsletter; nuestra DB conserva el vínculo lead ↔ auditoría (para mostrarle el mockup, para el PDF, y para el panel admin).
+Tú has elegido la **API directa**, que es más rápida, sin costo extra y conserva el vínculo lead ↔ auditoría.
 
-## Cambios
+## Plan de implementación
 
-### 1. Nuevo componente `ClickFunnelsForm`
-- Renderiza inputs propios (nombre, apellido, email) con nuestro estilo actual (mantiene la UI dorada sobre el mockup — un iframe/embed de CF rompería el diseño y bloquearía sandbox).
-- Al submit:
-  1. `POST` al endpoint del formulario de CF (form action URL que tú me pasarás) usando `fetch` con `mode: "no-cors"` y `application/x-www-form-urlencoded` — así CF crea el contacto y lo mete en tu newsletter/follow-up.
-  2. En paralelo, `await captureLead({ id, first_name, last_name, email })` para guardar en nuestra DB y desbloquear el mockup.
-- Si el paso 2 falla, mostramos error; si el paso 1 falla silenciosamente (no-cors no permite leer respuesta), no bloqueamos al usuario — el registro en CF se puede reconciliar después vía export.
+### 1. Datos que necesito de ti
 
-### 2. Configuración
-- Nueva constante `CLICKFUNNELS_FORM_ACTION` en `src/routes/index.tsx` (o en un archivo de config). Necesito de ti la **URL de acción del formulario** de ClickFunnels y los **nombres exactos de los campos** (`contact[first_name]`, `contact[email]`, etc. — varían entre CF Classic y CF 2.0).
-- Opcional: añadir campos ocultos que CF acepte como tags para segmentar estos leads como "HERO OS Audit".
+ClickFunnels 2.0 se autentica con **Personal API Token**. Necesito tres valores:
 
-### 3. Sin cambios en backend
-- `funnel_audits`, `captureLead` y el flujo de mockup/PDF quedan igual.
-- No hace falta secreto ni API token de CF — el form action es público por diseño.
+1. **`CLICKFUNNELS_API_TOKEN`** — lo generas en tu perfil de ClickFunnels 2.0 → *Personal API Tokens* → *Generate New Token*.
+2. **`CLICKFUNNELS_SUBDOMAIN`** — tu workspace de CF (ej. si tu URL es `https://miempresa.myclickfunnels.com`, el subdominio es `miempresa`).
+3. **`CLICKFUNNELS_WORKSPACE_ID`** — el número que aparece en la URL del dashboard (`/workspaces/{id}/...`). Si no lo tienes, lo detecto automáticamente en la primera llamada a `/workspaces` y te lo devuelvo para que lo confirmes.
 
-## Lo que necesito de ti para implementar
+Los tres se guardan como secretos de runtime (nunca en el código). El token se envía como `Authorization: Bearer <token>`.
 
-1. **URL de acción** del formulario de ClickFunnels (algo tipo `https://myfunnel.myclickfunnels.com/forms/...` o `.../submit`).
-2. **Nombres de los campos** del formulario CF (primer nombre, apellido, email). Puedes inspeccionar el form en CF con click derecho → Inspect y copiar los `name="..."`.
-3. (Opcional) Si quieres tag/segmento específico en CF, dime cuál.
+### 2. Cambios en backend
 
-## Alternativa si prefieres Zapier igual
-CF form nativo (sin nuestros inputs) → Zapier webhook → nuestro server route `/api/public/clickfunnels-webhook` que hace upsert en `funnel_audits` por email. Pierdes el vínculo con `audit_id` a menos que pasemos ese ID como hidden field y Zapier lo reenvíe. Puedo hacerlo, pero es más frágil.
+#### Nueva función `subscribeToClickFunnels` — `src/lib/clickfunnels.functions.ts`
+- Determina el `workspace_id` si no está configurado llamando a `GET /workspaces`.
+- Crea o actualiza el contacto con `POST /workspaces/{id}/contacts`.
+- Body:
+  ```json
+  {
+    "contact": {
+      "email_addresses": [{ "email": "..." }],
+      "first_name": "...",
+      "last_name": "..."
+    }
+  }
+  ```
+- Si me indicas un tag/lista, aplica el tag con `POST /contacts/{id}/tags`.
+- Failsafe: cualquier error de CF (email duplicado, rate limit, token inválido) se captura y guarda, pero **no bloquea** el desbloqueo del mockup. El lead ya quedó en nuestra base de datos.
 
----
+#### Modificación de `captureLead` — `src/lib/funnel.functions.ts`
+- Después del `update` a `funnel_audits`, invoca `subscribeToClickFunnels` con `first_name`, `last_name`, `email`.
+- Guarda el `contact_id` devuelto por CF y la fecha de sincronización para poder reconciliar o debuggear.
 
-Confírmame el enfoque y pásame la URL + campos del form de CF, y lo implemento.
+### 3. Migración de base de datos
+
+Añadir a la tabla `funnel_audits`:
+- `clickfunnels_contact_id text` (nullable)
+- `clickfunnels_synced_at timestamptz` (nullable)
+- `clickfunnels_error text` (nullable, para debugging desde `/admin`)
+
+### 4. Sin cambios en la UI
+
+El formulario actual (nombre, apellido, email) sigue igual. El envío a ClickFunnels ocurre en el servidor; el usuario no ve nada distinto.
+
+## Ventajas de este enfoque
+
+- **Sin Zapier**: sin suscripción extra, sin latencia de 1–15 minutos.
+- **Vínculo intacto**: `audit_id` ↔ lead en nuestra DB se mantiene para mockup, PDF y panel admin.
+- **Failsafe**: si CF falla, el lead no se pierde; queda en `funnel_audits` y el error se guarda para revisión.
+- **Compatible con Cloudflare Workers**: usa `fetch` estándar, sin SDK de Node.
+
+## Próximos pasos
+
+1. Si apruebas, primero pido los tres secretos con `add_secret`.
+2. Corro la migración para las nuevas columnas.
+3. Implemento `clickfunnels.functions.ts` y modifico `captureLead`.
+4. Probamos con un email real y verificamos que aparece en tu workspace de ClickFunnels.
+
+¿Confirmamos este plan?
