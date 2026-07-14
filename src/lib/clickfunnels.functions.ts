@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureCfTag, applyCfTag } from "@/lib/funnel.functions";
 
 type CFCreds = { token: string; subdomain: string; workspaceId: string; base: string };
 
@@ -29,6 +30,32 @@ async function resolveCreds(): Promise<CFCreds | null> {
   }
   if (!workspaceId) return null;
   return { token, subdomain, workspaceId, base };
+}
+
+/**
+ * Look up a contact by email in ClickFunnels and return its id (or null).
+ */
+async function findCfContactIdByEmail(
+  creds: CFCreds,
+  email: string,
+): Promise<string | null> {
+  const headers = {
+    Authorization: `Bearer ${creds.token}`,
+    Accept: "application/json",
+  };
+  try {
+    const url = `${creds.base}/workspaces/${creds.workspaceId}/contacts?filter[email]=${encodeURIComponent(email)}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      console.warn("CF contact lookup failed", res.status);
+      return null;
+    }
+    const list = (await res.json()) as Array<{ id?: number | string }>;
+    if (Array.isArray(list) && list[0]?.id) return String(list[0].id);
+  } catch (e) {
+    console.warn("CF contact lookup exception", e);
+  }
+  return null;
 }
 
 /**
@@ -161,41 +188,100 @@ async function replicateMockupToClickFunnels(id: string): Promise<void> {
 }
 
 /**
- * Called from the client when the ClickFunnels scheduler iframe posts a
- * booking-completed message. Marks the audit as booked and (once) fires the
- * mockup replication into ClickFunnels.
+ * Applies the "Funnel Analyzer — Booked" tag to the contact in ClickFunnels
+ * so it can be segmented in CRM/automations. Best-effort; never throws.
+ */
+async function tagContactBooked(email: string | null): Promise<void> {
+  if (!email) return;
+  const creds = await resolveCreds();
+  if (!creds) return;
+  const headers = {
+    Authorization: `Bearer ${creds.token}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  const contactId = await findCfContactIdByEmail(creds, email);
+  if (!contactId) return;
+  const tagId = await ensureCfTag(
+    creds.base,
+    headers,
+    creds.workspaceId,
+    "Funnel Analyzer — Booked",
+    "#C9A84C",
+  );
+  if (tagId) await applyCfTag(creds.base, headers, contactId, tagId);
+}
+
+/**
+ * Marks an audit as booked (idempotent), triggers ClickFunnels replication,
+ * and applies the "Booked" tag to the contact. Returns whether the state
+ * transitioned from non-booked to booked.
+ */
+export async function markAuditBooked(id: string): Promise<boolean> {
+  const { data: row, error: readErr } = await supabaseAdmin
+    .from("funnel_audits")
+    .select("id, call_status, clickfunnels_funnel_id, email")
+    .eq("id", id)
+    .single();
+  if (readErr || !row) throw new Error("not_found");
+
+  const wasBooked = row.call_status === "booked";
+  if (!wasBooked) {
+    const { error: updErr } = await supabaseAdmin
+      .from("funnel_audits")
+      .update({ call_status: "booked" })
+      .eq("id", id);
+    if (updErr) {
+      console.error("markAuditBooked update error", updErr);
+      throw new Error("db_error");
+    }
+  }
+
+  // Tag the contact as booked (idempotent on CF side; tag apply is a no-op
+  // if it already exists — the CF API returns 200 or 422 either way).
+  await tagContactBooked(row.email).catch((e) =>
+    console.error("tagContactBooked error", e),
+  );
+
+  if (!row.clickfunnels_funnel_id) {
+    await replicateMockupToClickFunnels(id);
+  }
+
+  return !wasBooked;
+}
+
+/**
+ * Finds the most recent pending audit for the given email and marks it as
+ * booked. Used by the ClickFunnels appointment webhook.
+ */
+export async function markBookedByEmail(email: string): Promise<boolean> {
+  const normalized = email.trim().toLowerCase();
+  const { data: rows, error } = await supabaseAdmin
+    .from("funnel_audits")
+    .select("id, call_status")
+    .ilike("email", normalized)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) {
+    console.error("markBookedByEmail lookup error", error);
+    return false;
+  }
+  const row = rows?.[0];
+  if (!row) return false;
+  await markAuditBooked(row.id);
+  return true;
+}
+
+/**
+ * Called from the client when the user confirms they've booked their call.
+ * Marks the audit as booked and (once) fires the mockup replication into
+ * ClickFunnels + applies the Booked tag.
  */
 export const markBooked = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data }) => {
-    const { data: row, error: readErr } = await supabaseAdmin
-      .from("funnel_audits")
-      .select("id, call_status, clickfunnels_funnel_id")
-      .eq("id", data.id)
-      .single();
-    if (readErr || !row) throw new Error("not_found");
-
-    // Idempotent: only mark + replicate the first time.
-    if (row.call_status !== "booked") {
-      const { error: updErr } = await supabaseAdmin
-        .from("funnel_audits")
-        .update({ call_status: "booked" })
-        .eq("id", data.id);
-      if (updErr) {
-        console.error("markBooked update error", updErr);
-        throw new Error("db_error");
-      }
-    }
-
-    if (!row.clickfunnels_funnel_id) {
-      // Fire-and-forget: don't block the response on ClickFunnels calls.
-      // We await inside a wrapper that swallows errors so the handler returns
-      // promptly even if CF is slow — but replication still runs to completion
-      // in the worker before it shuts down for this request.
-      await replicateMockupToClickFunnels(data.id);
-    }
-
+    await markAuditBooked(data.id);
     return { success: true };
   });
