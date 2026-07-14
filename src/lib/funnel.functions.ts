@@ -428,6 +428,64 @@ const leadSchema = z.object({
   email: z.string().trim().email().max(200),
 });
 
+async function pushToClickFunnels(lead: {
+  first_name: string;
+  last_name: string;
+  email: string;
+}) {
+  const token = process.env.CLICKFUNNELS_API_TOKEN;
+  const subdomain = process.env.CLICKFUNNELS_SUBDOMAIN;
+  let workspaceId = process.env.CLICKFUNNELS_WORKSPACE_ID;
+  if (!token || !subdomain) {
+    console.warn("ClickFunnels not configured; skipping");
+    return;
+  }
+  const base = `https://${subdomain}.myclickfunnels.com/api/v2`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  if (!workspaceId) {
+    try {
+      const wsRes = await fetch(`${base}/workspaces`, { headers });
+      if (wsRes.ok) {
+        const list = (await wsRes.json()) as Array<{ id: number | string }>;
+        if (Array.isArray(list) && list[0]?.id) workspaceId = String(list[0].id);
+      } else {
+        console.error("ClickFunnels workspaces fetch failed", wsRes.status, await wsRes.text());
+      }
+    } catch (e) {
+      console.error("ClickFunnels workspace lookup error", e);
+    }
+  }
+  if (!workspaceId) {
+    console.error("ClickFunnels workspace_id not resolved");
+    return;
+  }
+
+  const body = {
+    contact: {
+      first_name: lead.first_name,
+      last_name: lead.last_name,
+      email_addresses: [{ email: lead.email }],
+    },
+  };
+  try {
+    const res = await fetch(`${base}/workspaces/${workspaceId}/contacts/upsert`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      console.error("ClickFunnels upsert failed", res.status, await res.text());
+    }
+  } catch (e) {
+    console.error("ClickFunnels upsert error", e);
+  }
+}
+
 export const captureLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => leadSchema.parse(input))
   .handler(async ({ data }) => {
@@ -443,5 +501,11 @@ export const captureLead = createServerFn({ method: "POST" })
       console.error("captureLead error", error);
       throw new Error("db_error");
     }
+    // Fire-and-forget to ClickFunnels; do not block the user flow.
+    await pushToClickFunnels({
+      first_name: data.first_name,
+      last_name: data.last_name,
+      email: data.email,
+    });
     return { success: true };
   });
