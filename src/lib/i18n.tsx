@@ -60,6 +60,10 @@ const dict = {
     cta_pre_mockup_sub: "Book a free 30-minute strategy call. We'll walk through your audit, show you exactly what to fix, and decide together if working with us makes sense. No pitch, no pressure.",
     cta_pre_mockup_btn: "Book my free strategy call",
     cta_pre_mockup_reasons: "Personalized walkthrough · Tailored fix-list · No commitment",
+    schedule_block_title: "Book your free strategy call",
+    schedule_block_sub: "Pick a time below. When you book, we'll automatically replicate this mockup as a real page in ClickFunnels so you can launch it.",
+    booked_title: "Your call is booked",
+    booked_sub: "We're preparing your page in ClickFunnels — you'll get the link by email shortly.",
     start_over: "Analyze another page",
   },
   es: {
@@ -119,6 +123,10 @@ const dict = {
     cta_pre_mockup_sub: "Reserva una llamada estratégica gratuita de 30 minutos. Revisamos juntos tu auditoría, te mostramos exactamente qué corregir y vemos si tiene sentido trabajar juntos. Sin venta dura, sin compromiso.",
     cta_pre_mockup_btn: "Reservar mi llamada gratis",
     cta_pre_mockup_reasons: "Revisión personalizada · Plan de acción a tu medida · Sin compromiso",
+    schedule_block_title: "Agenda tu llamada de estrategia gratuita",
+    schedule_block_sub: "Elige un horario abajo. Al agendar, replicamos automáticamente esta maqueta como página real en ClickFunnels para que puedas lanzarla.",
+    booked_title: "Tu llamada está agendada",
+    booked_sub: "Estamos preparando tu página en ClickFunnels — te enviamos el link por correo en breve.",
     start_over: "Analizar otra página",
   },
 } as const;
