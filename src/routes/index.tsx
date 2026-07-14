@@ -156,6 +156,7 @@ function HomePage() {
     setAudit(null);
     setMockupHtml(null);
     setForm({ first_name: "", last_name: "", email: "" });
+    setBooked(false);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

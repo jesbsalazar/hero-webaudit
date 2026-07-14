@@ -21,7 +21,7 @@ export const getLeads = createServerFn({ method: "POST" })
     const { data, error } = await supabaseAdmin
       .from("funnel_audits")
       .select(
-        "id, created_at, first_name, last_name, email, url_submitted, language, overall_score, call_status, audit_json, mockup_html, brand_colors",
+        "id, created_at, first_name, last_name, email, url_submitted, language, overall_score, call_status, audit_json, mockup_html, brand_colors, clickfunnels_funnel_id, clickfunnels_page_url, clickfunnels_replicated_at, clickfunnels_replicate_error",
       )
       .order("created_at", { ascending: false })
       .limit(500);

@@ -57,6 +57,10 @@ type Lead = {
   audit_json: AuditJson | null;
   mockup_html: string | null;
   brand_colors: unknown;
+  clickfunnels_funnel_id: string | null;
+  clickfunnels_page_url: string | null;
+  clickfunnels_replicated_at: string | null;
+  clickfunnels_replicate_error: string | null;
 };
 
 function AdminPage() {
@@ -160,6 +164,7 @@ function AdminPage() {
                 <TableHead>Score</TableHead>
                 <TableHead>Lang</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>CF Page</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
