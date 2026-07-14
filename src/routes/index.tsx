@@ -379,6 +379,15 @@ function HomePage() {
                         </p>
                       </div>
                       <ClickFunnelsScheduler onBooked={handleBooked} />
+                      <div className="mt-4 text-center">
+                        <button
+                          type="button"
+                          onClick={handleBooked}
+                          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-gold"
+                        >
+                          {t("already_booked_help")}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </motion.div>

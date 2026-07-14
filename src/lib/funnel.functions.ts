@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureCfTag, applyCfTag } from "@/lib/clickfunnels-tags";
 import type { AuditJson } from "@/lib/audit-types";
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
@@ -472,6 +473,7 @@ async function pushToClickFunnels(lead: {
       email_addresses: [{ email: lead.email }],
     },
   };
+  let contactId: string | null = null;
   try {
     const res = await fetch(`${base}/workspaces/${workspaceId}/contacts/upsert`, {
       method: "POST",
@@ -480,11 +482,29 @@ async function pushToClickFunnels(lead: {
     });
     if (!res.ok) {
       console.error("ClickFunnels upsert failed", res.status, await res.text());
+      return;
     }
+    const json = (await res.json()) as { id?: number | string; contact?: { id?: number | string } };
+    const rawId = json.id ?? json.contact?.id;
+    if (rawId) contactId = String(rawId);
   } catch (e) {
     console.error("ClickFunnels upsert error", e);
+    return;
+  }
+
+  if (!contactId) {
+    console.warn("ClickFunnels upsert returned no contact id");
+    return;
+  }
+
+  try {
+    const tagId = await ensureCfTag(base, headers, workspaceId, "Funnel Analyzer", "#1E90FF");
+    if (tagId) await applyCfTag(base, headers, contactId, tagId);
+  } catch (e) {
+    console.error("ClickFunnels tag apply error", e);
   }
 }
+
 
 export const captureLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => leadSchema.parse(input))
