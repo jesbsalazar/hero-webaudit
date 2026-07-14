@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { ensureCfTag, applyCfTag } from "@/lib/funnel.functions";
+import { ensureCfTag, applyCfTag } from "@/lib/clickfunnels-tags";
 
 type CFCreds = { token: string; subdomain: string; workspaceId: string; base: string };
 
