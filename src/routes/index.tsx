@@ -40,6 +40,18 @@ function HomePage() {
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [booked, setBooked] = useState(false);
+  const mark = useServerFn(markBooked);
+
+  const handleBooked = async () => {
+    setBooked(true);
+    if (!auditId) return;
+    try {
+      await mark({ data: { id: auditId } });
+    } catch (e) {
+      console.error("markBooked failed", e);
+    }
+  };
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
