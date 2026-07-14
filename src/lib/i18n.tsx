@@ -64,6 +64,8 @@ const dict = {
     schedule_block_sub: "Pick a time below. When you book, we'll automatically replicate this mockup as a real page in ClickFunnels so you can launch it.",
     booked_title: "Your call is booked",
     booked_sub: "We're preparing your page in ClickFunnels — you'll get the link by email shortly.",
+    already_booked_cta: "I already booked — continue",
+    already_booked_help: "Booked but nothing happened? Click here to unlock the next steps.",
     start_over: "Analyze another page",
   },
   es: {
