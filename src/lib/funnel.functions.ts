@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ensureCfTag, applyCfTag } from "@/lib/clickfunnels-tags";
 import type { AuditJson } from "@/lib/audit-types";
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
