@@ -25,12 +25,6 @@ export const Route = createFileRoute("/")({
 
 type Phase = "input" | "loading" | "report" | "captured";
 
-export const Route = createFileRoute("/")({
-  component: HomePage,
-});
-
-type Phase = "input" | "loading" | "report" | "captured";
-
 function HomePage() {
   const { t, lang } = useT();
   const analyze = useServerFn(analyzePage);
