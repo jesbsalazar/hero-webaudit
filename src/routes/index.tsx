@@ -14,10 +14,16 @@ import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import logo from "@/assets/hero-os-logo.png";
 import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions";
+import { markBooked } from "@/lib/clickfunnels.functions";
+import { ClickFunnelsScheduler, SCHEDULER_URL } from "@/components/ClickFunnelsScheduler";
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
 
-const CALENDLY = "https://calendly.com/jsbusinesscoach/hero-os-strategy-call";
+export const Route = createFileRoute("/")({
+  component: HomePage,
+});
+
+type Phase = "input" | "loading" | "report" | "captured";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
