@@ -1,69 +1,103 @@
-## Por qué Lovable no tiene "conector Zapier" y qué hacemos en su lugar
+## Aclaración del flujo
 
-Zapier no es un servicio con una API única; es una plataforma que conecta dos aplicaciones. En Lovable podemos consumir cualquiera de los dos extremos:
+- **Mockup visual**: se muestra **por defecto** en la página (sin gate). Se mantiene el comportamiento actual salvo por el gate.
+- **Formulario nombre/email**: sigue existiendo como paso para desbloquear el mockup y el PDF (ya sincroniza con ClickFunnels Contacts vía API).
+- **Scheduler de ClickFunnels**: reemplaza a Calendly en todos los CTAs de "agendar llamada".
+- **Replicar el mockup en ClickFunnels como página real**: se dispara **solo después** de que la persona agende la llamada (vía el `postMessage` del iframe del scheduler).
 
-- **Recibir un webhook de Zapier** → creamos un endpoint `/api/public/clickfunnels-webhook` y tu Zap de ClickFunnels lo llama.
-- **Llamar directamente a ClickFunnels** → nuestro backend usa la API oficial de CF 2.0, sin intermediarios.
+## Flujo completo
 
-Tú has elegido la **API directa**, que es más rápida, sin costo extra y conserva el vínculo lead ↔ auditoría.
+```text
+[Landing]
+   │
+[URL → análisis → auditoría + mockup]
+   │
+[Reporte + CTA principal apuntando al scheduler CF]
+   │
+[Mockup con blur + form nombre/email]  ← igual que hoy
+   │  submit → captureLead (guarda + sync a CF Contacts)
+   ▼
+[Mockup DESBLOQUEADO + PDF + bloque "Agenda tu llamada" con iframe del scheduler embebido]
+   │  el usuario agenda
+   │  postMessage {id:'redirectFromIframe'} desde jesusesalazar.com
+   ▼
+[markBooked(auditId) en server]
+   │  UPDATE call_status = 'booked'
+   │  dispara replicateMockupToClickFunnels(auditId)  ← fire-and-forget
+   ▼
+[Mensaje de confirmación: "Tu llamada está agendada y estamos preparando tu página en ClickFunnels"]
+```
 
-## Plan de implementación
+## Cambios en el código
 
-### 1. Datos que necesito de ti
+### 1. `src/routes/index.tsx`
+- Reemplazar la constante `CALENDLY` por `SCHEDULER_URL = "https://www.jesusesalazar.com/schedule/funnel-audit"`. Actualizar los CTAs "book_call" y `cta_pre_mockup_btn` para apuntar ahí (target `_blank` sigue funcionando como fallback).
+- En `phase === "captured"` (mockup ya desbloqueado, hoy sólo muestra "Descargar PDF" y "Agendar llamada" enlazando a Calendly), sustituir el botón de agendar por un **bloque con el iframe del scheduler CF embebido**. Ese bloque:
+  - Renderiza `<ClickFunnelsScheduler auditId={auditId} onBooked={...} />` (nuevo componente).
+  - Al recibir `onBooked`, muestra el estado final "Llamada agendada + estamos preparando tu página" y llama `markBooked({ id: auditId })`.
+- La sección `phase === "report"` (mockup con blur + form) se mantiene tal cual, con los mismos textos.
 
-ClickFunnels 2.0 se autentica con **Personal API Token**. Necesito tres valores:
+### 2. Nuevo componente `src/components/ClickFunnelsScheduler.tsx`
+- Renderiza un `<iframe src={SCHEDULER_URL}>` con `min-height: 900px`, `width: 100%`, `bg: white`.
+- Sin `sandbox` (necesita `postMessage`). Sin `iframe-resizer` de cdnjs — usamos altura mínima generosa.
+- Añade `window.addEventListener('message', handler)` que:
+  - Filtra estrictamente `event.origin === 'https://www.jesusesalazar.com'`.
+  - Si `event.data?.id === 'redirectFromIframe'`, dispara `onBooked()` una sola vez.
+- Cleanup del listener en unmount.
 
-1. **`CLICKFUNNELS_API_TOKEN`** — lo generas en tu perfil de ClickFunnels 2.0 → *Personal API Tokens* → *Generate New Token*.
-2. **`CLICKFUNNELS_SUBDOMAIN`** — tu workspace de CF (ej. si tu URL es `https://miempresa.myclickfunnels.com`, el subdominio es `miempresa`).
-3. **`CLICKFUNNELS_WORKSPACE_ID`** — el número que aparece en la URL del dashboard (`/workspaces/{id}/...`). Si no lo tienes, lo detecto automáticamente en la primera llamada a `/workspaces` y te lo devuelvo para que lo confirmes.
+### 3. Nueva server fn `markBooked` en `src/lib/funnel.functions.ts`
+- `POST`, input `{ id: uuid }`, sin auth (usa el `id` como token igual que `captureLead`).
+- `UPDATE funnel_audits SET call_status = 'booked' WHERE id = ?` con `supabaseAdmin`.
+- Tras el update, invoca `replicateMockupToClickFunnels(id)` **sin await** (fire-and-forget) y captura errores en logs.
+- Idempotente: si `call_status` ya es `booked`, no re-dispara la replicación (comprobación previa).
 
-Los tres se guardan como secretos de runtime (nunca en el código). El token se envía como `Authorization: Bearer <token>`.
+### 4. Nueva server fn `replicateMockupToClickFunnels` en `src/lib/clickfunnels.functions.ts` (nuevo archivo)
+Alcance realista para MVP — crear una página estática dentro de un funnel nuevo en la cuenta ClickFunnels del admin, replicando el mockup HTML que ya guardamos en `funnel_audits.mockup_html`.
 
-### 2. Cambios en backend
+Pasos internos:
+1. Leer `funnel_audits` (id, first_name, last_name, email, mockup_html, url_submitted, brand_colors).
+2. Resolver `workspace_id` (env var o `GET /workspaces` como ya hacemos en `captureLead`).
+3. `POST /workspaces/{id}/funnels` con `{ funnel: { name: "Audit Mockup — {first_name} {last_name}" } }` → obtener `funnel_id`.
+4. `POST /funnels/{funnel_id}/pages` con `{ page: { name: "Landing", slug: "landing" } }` → `page_id`.
+5. `PATCH /pages/{page_id}` (o el endpoint correspondiente de CF 2.0 para setear HTML custom) con el `mockup_html` como contenido. Si CF 2.0 no permite HTML raw a nivel de page (probable), guardamos el HTML como un **bloque de código embed** dentro de la primera sección. Confirmamos el endpoint exacto en la primera ejecución y ajustamos si CF devuelve un error de campo.
+6. Guardar en `funnel_audits`:
+   - `clickfunnels_funnel_id text`
+   - `clickfunnels_page_url text`
+   - `clickfunnels_replicated_at timestamptz`
+   - `clickfunnels_replicate_error text` (para debug si algo falla)
+- Toda la función es tolerante a fallos: si CF rechaza cualquier paso, se guarda el error y no rompe el flujo del usuario (ya agendó, ya tiene su PDF).
 
-#### Nueva función `subscribeToClickFunnels` — `src/lib/clickfunnels.functions.ts`
-- Determina el `workspace_id` si no está configurado llamando a `GET /workspaces`.
-- Crea o actualiza el contacto con `POST /workspaces/{id}/contacts`.
-- Body:
-  ```json
-  {
-    "contact": {
-      "email_addresses": [{ "email": "..." }],
-      "first_name": "...",
-      "last_name": "..."
-    }
-  }
-  ```
-- Si me indicas un tag/lista, aplica el tag con `POST /contacts/{id}/tags`.
-- Failsafe: cualquier error de CF (email duplicado, rate limit, token inválido) se captura y guarda, pero **no bloquea** el desbloqueo del mockup. El lead ya quedó en nuestra base de datos.
+### 5. Migración de base de datos
+Añadir a `funnel_audits`:
+- `clickfunnels_funnel_id text`
+- `clickfunnels_page_url text`
+- `clickfunnels_replicated_at timestamptz`
+- `clickfunnels_replicate_error text`
 
-#### Modificación de `captureLead` — `src/lib/funnel.functions.ts`
-- Después del `update` a `funnel_audits`, invoca `subscribeToClickFunnels` con `first_name`, `last_name`, `email`.
-- Guarda el `contact_id` devuelto por CF y la fecha de sincronización para poder reconciliar o debuggear.
+`call_status` ya existe.
 
-### 3. Migración de base de datos
+### 6. Admin `/admin`
+- Añadir columna "CF Page" que muestra un link a `clickfunnels_page_url` cuando existe.
+- Añadir chip de error si `clickfunnels_replicate_error` no es null.
+- (Sin cambios en las server fns de admin; sólo lectura extra en la UI.)
 
-Añadir a la tabla `funnel_audits`:
-- `clickfunnels_contact_id text` (nullable)
-- `clickfunnels_synced_at timestamptz` (nullable)
-- `clickfunnels_error text` (nullable, para debugging desde `/admin`)
+### 7. i18n (`src/lib/i18n.tsx`)
+- `schedule_block_title` — "Agenda tu llamada de estrategia" / "Book your strategy call"
+- `schedule_block_sub` — "Al agendar, replicamos automáticamente el mockup en ClickFunnels para que puedas lanzarlo." / "…"
+- `booked_title` — "Llamada agendada ✅"
+- `booked_sub` — "Estamos preparando tu página en ClickFunnels. Te avisamos por email cuando esté lista."
 
-### 4. Sin cambios en la UI
+## Consideraciones técnicas
 
-El formulario actual (nombre, apellido, email) sigue igual. El envío a ClickFunnels ocurre en el servidor; el usuario no ve nada distinto.
+- **postMessage origin**: validamos estrictamente `https://www.jesusesalazar.com`. Cualquier otro origen se ignora.
+- **Idempotencia**: `markBooked` chequea `call_status` antes de replicar para evitar duplicar el funnel si el iframe manda el mensaje dos veces.
+- **CF API endpoints**: los exactos para crear funnels/pages y setear HTML pueden variar. La función maneja errores por paso y los persiste, así podemos ajustar sobre datos reales sin re-desplegar código en cascada.
+- **Sin bloqueo**: la replicación es fire-and-forget desde `markBooked`. La UI muestra "estamos preparando…" y confía en que el admin recibirá el link vía `/admin` o vía el email de CF cuando la página quede publicada.
+- **Sin script externo**: no cargamos `iframe-resizer` de cdnjs.
 
-## Ventajas de este enfoque
+## Preguntas mínimas
 
-- **Sin Zapier**: sin suscripción extra, sin latencia de 1–15 minutos.
-- **Vínculo intacto**: `audit_id` ↔ lead en nuestra DB se mantiene para mockup, PDF y panel admin.
-- **Failsafe**: si CF falla, el lead no se pierde; queda en `funnel_audits` y el error se guarda para revisión.
-- **Compatible con Cloudflare Workers**: usa `fetch` estándar, sin SDK de Node.
+1. **Slug / naming del funnel en CF**: ¿te parece bien `Audit Mockup — {first_name} {last_name}`, o prefieres incluir el dominio auditado (`Audit — {domain}`)?
+2. **Estado inicial de la página en CF**: ¿creamos la página **en borrador** (más seguro, tú la revisas y publicas), o **publicada** directamente en el subdominio de CF?
 
-## Próximos pasos
-
-1. Si apruebas, primero pido los tres secretos con `add_secret`.
-2. Corro la migración para las nuevas columnas.
-3. Implemento `clickfunnels.functions.ts` y modifico `captureLead`.
-4. Probamos con un email real y verificamos que aparece en tu workspace de ClickFunnels.
-
-¿Confirmamos este plan?
+Con esas dos respuestas procedo a implementar.
