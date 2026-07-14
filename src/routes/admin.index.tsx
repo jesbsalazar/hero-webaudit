@@ -207,11 +207,29 @@ function AdminPage() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="text-xs">
+                    {l.clickfunnels_page_url ? (
+                      <a
+                        href={l.clickfunnels_page_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Open
+                      </a>
+                    ) : l.clickfunnels_replicate_error ? (
+                      <Badge variant="destructive" title={l.clickfunnels_replicate_error}>
+                        error
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {!loading && leads.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                     No leads yet.
                   </TableCell>
                 </TableRow>
