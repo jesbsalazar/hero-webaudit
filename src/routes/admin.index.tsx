@@ -57,6 +57,10 @@ type Lead = {
   audit_json: AuditJson | null;
   mockup_html: string | null;
   brand_colors: unknown;
+  clickfunnels_funnel_id: string | null;
+  clickfunnels_page_url: string | null;
+  clickfunnels_replicated_at: string | null;
+  clickfunnels_replicate_error: string | null;
 };
 
 function AdminPage() {
@@ -160,6 +164,7 @@ function AdminPage() {
                 <TableHead>Score</TableHead>
                 <TableHead>Lang</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>CF Page</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -202,11 +207,29 @@ function AdminPage() {
                       </SelectContent>
                     </Select>
                   </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="text-xs">
+                    {l.clickfunnels_page_url ? (
+                      <a
+                        href={l.clickfunnels_page_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Open
+                      </a>
+                    ) : l.clickfunnels_replicate_error ? (
+                      <Badge variant="destructive" title={l.clickfunnels_replicate_error}>
+                        error
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {!loading && leads.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                     No leads yet.
                   </TableCell>
                 </TableRow>

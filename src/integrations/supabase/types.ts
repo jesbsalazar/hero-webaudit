@@ -19,6 +19,10 @@ export type Database = {
           audit_json: Json | null
           brand_colors: Json | null
           call_status: string
+          clickfunnels_funnel_id: string | null
+          clickfunnels_page_url: string | null
+          clickfunnels_replicate_error: string | null
+          clickfunnels_replicated_at: string | null
           created_at: string
           email: string | null
           first_name: string | null
@@ -33,6 +37,10 @@ export type Database = {
           audit_json?: Json | null
           brand_colors?: Json | null
           call_status?: string
+          clickfunnels_funnel_id?: string | null
+          clickfunnels_page_url?: string | null
+          clickfunnels_replicate_error?: string | null
+          clickfunnels_replicated_at?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
@@ -47,6 +55,10 @@ export type Database = {
           audit_json?: Json | null
           brand_colors?: Json | null
           call_status?: string
+          clickfunnels_funnel_id?: string | null
+          clickfunnels_page_url?: string | null
+          clickfunnels_replicate_error?: string | null
+          clickfunnels_replicated_at?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null

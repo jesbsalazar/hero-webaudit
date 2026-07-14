@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import logo from "@/assets/hero-os-logo.png";
 import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions";
+import { markBooked } from "@/lib/clickfunnels.functions";
+import { ClickFunnelsScheduler, SCHEDULER_URL } from "@/components/ClickFunnelsScheduler";
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
-
-const CALENDLY = "https://calendly.com/jsbusinesscoach/hero-os-strategy-call";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -40,6 +40,18 @@ function HomePage() {
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [booked, setBooked] = useState(false);
+  const mark = useServerFn(markBooked);
+
+  const handleBooked = async () => {
+    setBooked(true);
+    if (!auditId) return;
+    try {
+      await mark({ data: { id: auditId } });
+    } catch (e) {
+      console.error("markBooked failed", e);
+    }
+  };
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,6 +156,7 @@ function HomePage() {
     setAudit(null);
     setMockupHtml(null);
     setForm({ first_name: "", last_name: "", email: "" });
+    setBooked(false);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -233,7 +246,7 @@ function HomePage() {
                       {t("cta_pre_mockup_reasons")}
                     </p>
                   </div>
-                  <a href={CALENDLY} target="_blank" rel="noopener noreferrer" className="md:justify-self-end">
+                  <a href={SCHEDULER_URL} target="_blank" rel="noopener noreferrer" className="md:justify-self-end">
                     <Button
                       size="lg"
                       className="h-14 w-full bg-gold px-8 text-base font-bold text-gold-foreground shadow-lg shadow-gold/30 hover:bg-gold/90 md:w-auto"
@@ -325,28 +338,49 @@ function HomePage() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl border border-gold/40 bg-gradient-to-br from-panel to-panel-elevated p-8 text-center"
+                  className="space-y-6"
                 >
-                  <h3 className="text-2xl font-bold text-foreground md:text-3xl">{t("thanks_title")}</h3>
-                  <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">{t("thanks_sub")}</p>
-                  <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                    <Button
-                      onClick={handleDownload}
-                      disabled={downloading}
-                      size="lg"
-                      variant="outline"
-                      className="border-gold/40 text-foreground hover:bg-gold/10"
-                    >
-                      <Download className="h-4 w-4" />
-                      {downloading ? "…" : t("download_pdf")}
-                    </Button>
-                    <a href={CALENDLY} target="_blank" rel="noopener noreferrer">
-                      <Button size="lg" className="bg-gold text-gold-foreground hover:bg-gold/90">
-                        <Calendar className="h-4 w-4" />
-                        {t("book_call")}
+                  <div className="rounded-2xl border border-gold/40 bg-gradient-to-br from-panel to-panel-elevated p-8 text-center">
+                    <h3 className="text-2xl font-bold text-foreground md:text-3xl">{t("thanks_title")}</h3>
+                    <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">{t("thanks_sub")}</p>
+                    <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                      <Button
+                        onClick={handleDownload}
+                        disabled={downloading}
+                        size="lg"
+                        variant="outline"
+                        className="border-gold/40 text-foreground hover:bg-gold/10"
+                      >
+                        <Download className="h-4 w-4" />
+                        {downloading ? "…" : t("download_pdf")}
                       </Button>
-                    </a>
+                    </div>
                   </div>
+
+                  {booked ? (
+                    <div className="rounded-2xl border border-gold/50 bg-gradient-to-br from-panel-elevated to-panel p-8 text-center">
+                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-gold">
+                        <Calendar className="h-3 w-3" />
+                        {t("booked_title")}
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground md:text-2xl">{t("booked_title")}</h3>
+                      <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">{t("booked_sub")}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-gold/40 bg-panel p-6 md:p-8">
+                      <div className="mb-4 text-center">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-gold">
+                          <Calendar className="h-3 w-3" />
+                          {t("hero_eyebrow")}
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground md:text-2xl">{t("schedule_block_title")}</h3>
+                        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+                          {t("schedule_block_sub")}
+                        </p>
+                      </div>
+                      <ClickFunnelsScheduler onBooked={handleBooked} />
+                    </div>
+                  )}
                 </motion.div>
               )}
 
