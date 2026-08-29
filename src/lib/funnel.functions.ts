@@ -49,12 +49,7 @@ async function fetchViaFirecrawl(url: string): Promise<{ html: string; finalUrl:
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        url,
-        formats: ["html"],
-        onlyMainContent: false,
-        timeout: 30000,
-      }),
+      body: JSON.stringify({ url, formats: ["html"], onlyMainContent: false, timeout: 30000 }),
     });
     if (!res.ok) {
       console.error("Firecrawl fetch failed", res.status, await res.text().catch(() => ""));
@@ -108,87 +103,43 @@ const auditTool = {
         overall_score: { type: "number", description: "0-100 overall funnel quality." },
         headline_clarity: { type: "number", description: "0-100 clarity of main headline." },
         cta_strength: { type: "string", enum: ["weak", "medium", "strong"] },
-        big_domino: {
-          type: "object",
-          properties: { present: { type: "boolean" }, note: { type: "string" } },
-          required: ["present", "note"], additionalProperties: false,
-        },
-        opportunity_switch: {
-          type: "object",
-          properties: { present: { type: "boolean" }, note: { type: "string" } },
-          required: ["present", "note"], additionalProperties: false,
-        },
-        epiphany_bridge: {
-          type: "object",
-          properties: { present: { type: "boolean" }, note: { type: "string" } },
-          required: ["present", "note"], additionalProperties: false,
-        },
+        big_domino: { type: "object", properties: { present: { type: "boolean" }, note: { type: "string" } }, required: ["present", "note"], additionalProperties: false },
+        opportunity_switch: { type: "object", properties: { present: { type: "boolean" }, note: { type: "string" } }, required: ["present", "note"], additionalProperties: false },
+        epiphany_bridge: { type: "object", properties: { present: { type: "boolean" }, note: { type: "string" } }, required: ["present", "note"], additionalProperties: false },
         whats_working: { type: "array", items: { type: "string" }, description: "3-5 concrete strengths." },
         opportunities: { type: "array", items: { type: "string" }, description: "3-6 actionable improvements." },
         brand_colors: {
           type: "object",
-          properties: {
-            primary: { type: "string", description: "Hex like #1E90FF" },
-            accent: { type: "string" },
-            background: { type: "string" },
-          },
+          properties: { primary: { type: "string" }, accent: { type: "string" }, background: { type: "string" } },
           required: ["primary", "accent", "background"], additionalProperties: false,
         },
       },
-      required: [
-        "page_title", "detected_offer", "target_audience", "overall_score",
-        "headline_clarity", "cta_strength", "big_domino", "opportunity_switch",
-        "epiphany_bridge", "whats_working", "opportunities", "brand_colors",
-      ],
+      required: ["page_title", "detected_offer", "target_audience", "overall_score", "headline_clarity", "cta_strength", "big_domino", "opportunity_switch", "epiphany_bridge", "whats_working", "opportunities", "brand_colors"],
       additionalProperties: false,
     },
   },
 } as const;
 
-async function callAI(
-  systemPrompt: string,
-  userPrompt: string,
-  tools?: unknown[],
-  toolChoice?: unknown,
-  maxTokens = 12000,
-) {
+async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[], toolChoice?: unknown, maxTokens = 12000) {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !serviceRoleKey) throw new Error("Supabase AI proxy not configured");
-
-  const body: Record<string, unknown> = {
-    model: "gemini-3.6-flash",
-    systemPrompt,
-    userPrompt,
-    maxTokens,
-    temperature: 0.4,
-  };
+  const body: Record<string, unknown> = { model: "gemini-3.6-flash", systemPrompt, userPrompt, maxTokens, temperature: 0.4 };
   if (tools) body.tools = tools;
   if (toolChoice) body.toolChoice = toolChoice;
-
   const res = await fetch(`${supabaseUrl}/functions/v1/hero-web-audit-ai`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${serviceRoleKey}`,
-      apikey: serviceRoleKey,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
   if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
-  if (!res.ok) {
-    const txt = await res.text();
-    console.error("Supabase AI proxy error", res.status, txt);
-    throw new Error("ai_error");
-  }
+  if (!res.ok) { const txt = await res.text(); console.error("Supabase AI proxy error", res.status, txt); throw new Error("ai_error"); }
   return res.json();
 }
 
 export const analyzePage = createServerFn({ method: "POST" })
-  .inputValidator((input: { url: string; language: "en" | "es" }) => ({
-    url: urlSchema.parse(input.url), language: input.language === "es" ? "es" : "en",
-  }))
+  .inputValidator((input: { url: string; language: "en" | "es" }) => ({ url: urlSchema.parse(input.url), language: input.language === "es" ? "es" : "en" }))
   .handler(async ({ data }) => {
     const { html, finalUrl } = await fetchPage(data.url).catch((err) => {
       console.error("fetch error", err);
@@ -196,9 +147,7 @@ export const analyzePage = createServerFn({ method: "POST" })
       throw new Error(code === "fetch_blocked" ? "fetch_blocked" : "fetch_failed");
     });
     const cleaned = stripHtmlForLLM(html);
-    const langInstr = data.language === "es"
-      ? "Responde TODO el contenido (notas, fortalezas, oportunidades, oferta, audiencia) en español."
-      : "Respond with ALL content (notes, strengths, opportunities, offer, audience) in English.";
+    const langInstr = data.language === "es" ? "Responde TODO el contenido (notas, fortalezas, oportunidades, oferta, audiencia) en español." : "Respond with ALL content (notes, strengths, opportunities, offer, audience) in English.";
     const system = `You are a senior conversion strategist and direct-response copywriter applying the HERO Method — a proprietary funnel framework focused on Headline clarity, Engagement of the right audience, Resonant offer mechanics, and Optimized calls-to-action.
 
 Your job: audit a landing/sales page HTML and return a structured score using the submit_funnel_audit tool.
@@ -219,28 +168,18 @@ ${langInstr}`;
     if (!toolCall?.function?.arguments) throw new Error("ai_invalid_response");
     let audit: AuditJson;
     try { audit = JSON.parse(toolCall.function.arguments); } catch { throw new Error("ai_invalid_response"); }
-    audit.brand_colors = {
-      primary: safeHex(audit.brand_colors?.primary, "#1E90FF"),
-      accent: safeHex(audit.brand_colors?.accent, "#C9A84C"),
-      background: safeHex(audit.brand_colors?.background, "#0A1628"),
-    };
+    audit.brand_colors = { primary: safeHex(audit.brand_colors?.primary, "#1E90FF"), accent: safeHex(audit.brand_colors?.accent, "#C9A84C"), background: safeHex(audit.brand_colors?.background, "#0A1628") };
     audit.overall_score = Math.max(0, Math.min(100, Math.round(Number(audit.overall_score) || 0)));
     audit.headline_clarity = Math.max(0, Math.min(100, Math.round(Number(audit.headline_clarity) || 0)));
-    const { data: row, error } = await supabaseAdmin.from("funnel_audits").insert({
-      url_submitted: finalUrl, language: data.language, overall_score: audit.overall_score,
-      audit_json: audit as never, brand_colors: audit.brand_colors as never,
-    }).select("id").single();
+    const { data: row, error } = await supabaseAdmin.from("funnel_audits").insert({ url_submitted: finalUrl, language: data.language, overall_score: audit.overall_score, audit_json: audit as never, brand_colors: audit.brand_colors as never }).select("id").single();
     if (error || !row) { console.error("DB insert error", error); throw new Error("db_error"); }
     return { id: row.id, audit };
   });
 
 export const generateMockup = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: string; language: "en" | "es" }) => ({
-    id: z.string().uuid().parse(input.id), language: input.language === "es" ? "es" : "en",
-  }))
+  .inputValidator((input: { id: string; language: "en" | "es" }) => ({ id: z.string().uuid().parse(input.id), language: input.language === "es" ? "es" : "en" }))
   .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin.from("funnel_audits")
-      .select("audit_json, brand_colors, url_submitted, mockup_html").eq("id", data.id).single();
+    const { data: row, error } = await supabaseAdmin.from("funnel_audits").select("audit_json, brand_colors, url_submitted, mockup_html").eq("id", data.id).single();
     if (error || !row) throw new Error("not_found");
     if (row.mockup_html) return { html: row.mockup_html };
 
@@ -264,116 +203,111 @@ export const generateMockup = createServerFn({ method: "POST" })
       }
     } catch (e) { console.warn("re-fetch for mockup failed", e); }
 
-    const lang = data.language === "es"
-      ? "Todo el copy del HTML debe estar en español, natural, específico y persuasivo."
-      : "All HTML copy must be in English, natural, specific and persuasive.";
+    const lang = data.language === "es" ? "Todo el copy del HTML debe estar en español, natural, específico y persuasivo." : "All HTML copy must be in English, natural, specific and persuasive.";
 
-    const system = `You are the creative director, senior conversion strategist and elite front-end engineer behind a premium CRO agency.
+    const system = `You are the conversion creative director behind a CRO agency. You combine conversion strategy, direct-response copywriting and clean landing-page design.
 
-Your task is NOT to generate a generic AI landing-page template. Your task is to take the REAL page, understand its business, audience, offer, visual identity and conversion weaknesses, and create a convincing HIGH-FIDELITY redesign that a professional agency could present to the client as the proposed replacement.
+THE GOAL IS COMMERCIAL, NOT TECHNICAL:
+Create a redesign that makes the business owner think: “This message is much clearer. I want this page. I want someone to build it for me.”
+The mockup is a SALES DEMO of what better conversion could look like. It is not a coding showcase and it is not an exercise in adding more sections.
 
-Think like a combination of a world-class art director, CRO strategist, UX designer, direct-response copywriter and senior frontend engineer. The result must feel intentionally designed for THIS business, not for "a business".
+FIRST THINK, THEN DESIGN:
+Before writing HTML, silently determine:
+- What this business actually sells.
+- Who is most likely to buy it.
+- The visitor's strongest problem/desire.
+- The most compelling outcome supported by the source.
+- The strongest reason to believe.
+- The clearest next action.
+- The single biggest conversion mistake on the original page.
+Then build the page around those decisions.
 
-DESIGN INTELLIGENCE:
-1. First infer the page's visual language: brand personality, premium/mass-market position, typography, color hierarchy, imagery, spacing rhythm, button treatment, density and tone.
-2. Preserve recognizable brand DNA while fixing conversion problems identified by the HERO audit. Do not blindly redesign into a dark SaaS template.
-3. Build a deliberate visual hierarchy: one dominant promise, one primary CTA, supporting proof, objection handling and a clear path to action.
-4. Use the real product/service, brand name, vocabulary and facts found in the original HTML. Never replace them with placeholders such as "Your Brand", "Lorem ipsum", "John Doe" or fake statistics.
-5. Do NOT invent testimonials, reviews, awards, guarantees, prices, credentials, client logos or numerical claims. If the source does not contain proof, create a tasteful "proof opportunity" section using neutral explanatory copy rather than fabricated proof.
-6. Do not simply rearrange the original text. Rewrite weak copy using the audit insights: sharpen the Big Domino, make the Opportunity Switch explicit, strengthen the Epiphany Bridge, clarify the offer and create a stronger CTA.
-7. Make the page visually impressive above the fold. The first viewport should look like a finished campaign page, not a wireframe.
+COPY IS THE PRIMARY DESIGN:
+1. Lead with a specific, customer-centered promise. Avoid vague “transform your life/business” language.
+2. Make the visitor recognize themselves and their problem quickly.
+3. Explain the offer in plain language before adding detail.
+4. Make the Opportunity Switch clear: explain the better way to get the desired result, using the HERO audit and real business facts.
+5. Use the Epiphany Bridge to move from problem → realization → solution → action.
+6. Use one primary CTA concept throughout the page. Make the CTA concrete and desirable.
+7. Rewrite weak source copy when necessary. Do not merely rearrange it.
+8. Favor short, punchy headlines and useful subheads over walls of copy.
+9. Every section must earn its place by moving the visitor closer to action.
+10. The final section should make the next step feel obvious, low-friction and valuable.
 
-HIGH-CONVERSION PAGE ARCHITECTURE:
-Use the following structure when appropriate, but adapt it to the actual business instead of mechanically forcing every section:
-- Announcement/trust bar when useful
-- Premium sticky navigation with recognizable logo/brand and one dominant CTA
-- Hero: eyebrow, powerful outcome-led headline, concise subheadline, CTA, micro-trust and a strong visual composition using original imagery
-- Problem/recognition section that makes the right visitor feel understood
-- Benefits/outcomes section with 3-4 distinctive visual cards, not generic icon boxes
-- Mechanism / "why this works" section that communicates the Opportunity Switch
-- Proof section using ONLY real proof from the source
-- Offer stack / what you get, with hierarchy and visual value framing when the source supports it
-- Process / how it works when relevant
-- Objection handling / FAQ with 4-6 substantive questions
-- Final CTA section with a strong emotional close
-- Minimal, polished footer
+DO NOT FABRICATE:
+- No fake testimonials, reviews, awards, logos, credentials, guarantees, prices, percentages, customer counts or performance claims.
+- Use only facts and proof found in the source.
+- If proof is missing, do not invent it. Instead, strengthen clarity, mechanism, process and offer framing.
 
-VISUAL QUALITY BAR:
-- Aim for the quality level of a top-tier Webflow/Framer agency concept, not a basic Tailwind starter.
-- Use strong editorial composition, asymmetry where appropriate, layered cards, image crops, subtle gradients, borders, texture, whitespace and depth.
-- Use CSS variables and a coherent spacing/type scale.
-- Use responsive CSS for desktop, tablet and mobile.
-- Use inline SVG icons and decorative shapes when useful; never rely on emoji for UI.
-- Use hover states, focus states, subtle transitions and polished buttons.
-- Use CSS gradients/noise-like overlays only when they improve the visual system.
-- Hero headline should normally be 52-76px desktop and 34-44px mobile, but adapt to the brand.
-- Body copy should normally be 16-19px with generous line-height.
-- Avoid excessive rounded cards. Not every section should look like a dashboard.
-- Avoid giant empty areas, repetitive three-column grids and generic purple/blue AI aesthetics unless the source brand actually uses them.
-- Use the supplied brand colors as the foundation, but derive accessible shades and neutrals around them.
+VISUAL DIRECTION:
+- Make it polished, modern and clearly better than the original, but keep the design proportional to the business.
+- Preserve recognizable brand DNA: colors, tone, imagery and positioning.
+- Do not default to dark SaaS aesthetics, purple gradients, giant dashboards or excessive glassmorphism.
+- Do not turn every section into a rounded card.
+- Use whitespace, typography, contrast, image composition and a few strong visual moments.
+- The hero must immediately communicate the new positioning and show the real offer.
+- Use real source images when they help sell the offer.
+- Prefer one strong visual over five decorative ones.
+- Use subtle interaction states only where useful; the page must work without JavaScript.
 
-IMAGE STRATEGY:
-- Reuse the real source images whenever possible. Select them intentionally: hero, product/service, team, environment, proof, etc.
-- Use the real logo if an image URL appears to be a logo.
-- Do not use the same image repeatedly unless it is genuinely a hero asset.
-- Never invent image URLs. If there are no usable images, create a sophisticated visual treatment with CSS, gradients and inline SVG rather than fake stock-photo URLs.
+RECOMMENDED STRUCTURE — ADAPT, DON'T FORCE:
+1. Simple header with brand and one primary CTA.
+2. Hero: eyebrow + strong outcome/problem headline + concise subheadline + CTA + relevant visual.
+3. Recognition/problem section: make the right visitor feel understood.
+4. Opportunity/mechanism: explain the better way and why it makes sense.
+5. Outcomes/benefits: 3-4 specific benefits tied to the actual offer.
+6. Proof: only real proof from the source.
+7. Offer/process: make what happens next easy to understand.
+8. Objection handling: only useful objections/FAQs.
+9. Final CTA: restate the value of taking action now.
 
-COPY RULES:
-- Copy must be specific to the detected offer and audience.
-- Use concrete outcomes and language from the original page.
-- The CTA must be specific and action-oriented, not "Learn More" unless that is genuinely the correct action.
-- Keep one primary CTA concept and repeat it strategically.
-- Preserve factual accuracy. Do not invent claims.
-- The redesign should make the business sound more valuable, clear and credible without changing what it actually sells.
+IMPORTANT:
+A shorter page with exceptional messaging is better than a long page with filler. Do not add sections just to make the HTML bigger.
+Do not optimize for HTML size. Optimize for the moment when the owner sees the redesign and wants to buy the implementation.
 
 TECHNICAL REQUIREMENTS:
 - Output ONE complete self-contained HTML document beginning with <!doctype html>.
 - No <script> tags and no external JavaScript.
-- A single Google Fonts <link> is allowed. Choose typography based on the original brand.
-- All CSS must be inside the document. No external CSS dependencies.
-- Use semantic HTML and accessible labels, contrast, focus states and alt text.
-- Include responsive breakpoints and ensure the entire page works in a narrow mobile viewport.
-- Use CSS variables in :root for primary, accent, background, text and surface colors.
-- The page must be visually complete even if JavaScript is disabled; FAQ can use native <details>.
-- Total output target: 70KB-110KB of polished HTML/CSS when the content warrants it. Do not intentionally make it short.
+- A single Google Fonts <link> is allowed.
+- All CSS must be inside the document.
+- Use semantic HTML, accessible labels, alt text, focus states and responsive breakpoints.
+- Use CSS variables for the palette, typography and spacing.
+- Native <details> may be used for FAQs.
+- Never use placeholders such as “Your Brand”, “Lorem ipsum”, “John Doe” or “Your Headline”.
 - Never output explanations, markdown fences or commentary. Return raw HTML only.
 
 ${lang}`;
 
-    const user = `BRAND COLORS — use these as the core palette:
+    const user = `BRAND COLORS:
 ${JSON.stringify(colors)}
 
 ORIGINAL URL:
 ${row.url_submitted}
 
-SOURCE IMAGES — these are real absolute URLs extracted from the page. Use only the ones that genuinely fit the redesign:
-${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(No usable images extracted. Use an art-directed CSS/SVG composition instead.)"}
+SOURCE IMAGES — use only those that genuinely fit:
+${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(No usable images extracted.)"}
 
-HERO AUDIT — treat this as the conversion strategy brief:
+HERO AUDIT — THIS IS THE STRATEGIC BRIEF:
 ${JSON.stringify(audit, null, 2).slice(0, 10000)}
 
-ORIGINAL PAGE CONTENT — use this to understand the actual company, offer, audience, tone, vocabulary and factual claims. Do not invent facts that are not supported here:
+ORIGINAL PAGE CONTENT — use this to understand the real business, offer, audience, voice and factual claims:
 ${originalSnippet}
 
 DELIVERABLE:
-Create the redesigned production-quality landing page now. It should be immediately recognizable as a stronger version of the original business, while visibly fixing the highest-impact conversion problems identified by the HERO audit.`;
+Create the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
 
-    const aiRes = await callAI(system, user, undefined, undefined, 20000);
+    const aiRes = await callAI(system, user, undefined, undefined, 16000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) throw new Error("invalid_mockup");
     if (html.length > 140_000) html = html.slice(0, 140_000);
 
-    const { error: updateError } = await supabaseAdmin.from("funnel_audits")
-      .update({ mockup_html: html }).eq("id", data.id);
+    const { error: updateError } = await supabaseAdmin.from("funnel_audits").update({ mockup_html: html }).eq("id", data.id);
     if (updateError) { console.error("Mockup DB update error", updateError); throw new Error("db_error"); }
     return { html };
   });
 
-const leadSchema = z.object({
-  id: z.string().uuid(), first_name: z.string().trim().min(1).max(80),
-  last_name: z.string().trim().min(1).max(80), email: z.string().trim().email().max(200),
-});
+const leadSchema = z.object({ id: z.string().uuid(), first_name: z.string().trim().min(1).max(80), last_name: z.string().trim().min(1).max(80), email: z.string().trim().email().max(200) });
 
 async function pushToClickFunnels(lead: { first_name: string; last_name: string; email: string }) {
   const token = process.env.CLICKFUNNELS_API_TOKEN;
@@ -411,9 +345,7 @@ async function pushToClickFunnels(lead: { first_name: string; last_name: string;
 export const captureLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => leadSchema.parse(input))
   .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin.from("funnel_audits").update({
-      first_name: data.first_name, last_name: data.last_name, email: data.email,
-    }).eq("id", data.id);
+    const { error } = await supabaseAdmin.from("funnel_audits").update({ first_name: data.first_name, last_name: data.last_name, email: data.email }).eq("id", data.id);
     if (error) { console.error("captureLead error", error); throw new Error("db_error"); }
     await pushToClickFunnels({ first_name: data.first_name, last_name: data.last_name, email: data.email });
     return { success: true };
