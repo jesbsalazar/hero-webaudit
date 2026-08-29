@@ -182,24 +182,29 @@ async function callAI(
   userPrompt: string,
   tools?: unknown[],
   toolChoice?: unknown,
+  maxTokens = 12000,
 ) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("AI gateway not configured");
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Supabase AI proxy not configured");
+  }
 
   const body: Record<string, unknown> = {
-    model: "google/gemini-3-flash-preview",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
+    model: "gpt-4o-mini",
+    systemPrompt,
+    userPrompt,
+    maxTokens,
+    temperature: 0.4,
   };
   if (tools) body.tools = tools;
-  if (toolChoice) body.tool_choice = toolChoice;
+  if (toolChoice) body.toolChoice = toolChoice;
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch(`${supabaseUrl}/functions/v1/hero-web-audit-ai`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      apikey: serviceRoleKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -217,7 +222,7 @@ async function callAI(
   }
   if (!res.ok) {
     const txt = await res.text();
-    console.error("AI gateway error", res.status, txt);
+    console.error("Supabase AI proxy error", res.status, txt);
     throw new Error("ai_error");
   }
   return res.json();
@@ -268,7 +273,7 @@ ${cleaned}`;
     const aiRes = await callAI(system, user, [auditTool], {
       type: "function",
       function: { name: "submit_funnel_audit" },
-    });
+    }, 6000);
 
     const toolCall = aiRes?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
@@ -406,7 +411,7 @@ ${originalSnippet}
 
 Now produce the redesigned, realistic landing page.`;
 
-    const aiRes = await callAI(system, user);
+    const aiRes = await callAI(system, user, undefined, undefined, 12000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) {
