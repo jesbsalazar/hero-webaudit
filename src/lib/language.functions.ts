@@ -79,11 +79,8 @@ function extractVisibleText(html: string): string {
     .replace(/<template[\s\S]*?<\/template>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ");
 
-  // Prioritize actual visitor-facing copy instead of HTML attributes, CSS and scripts.
   const copyMatches = content.match(/<(?:title|h1|h2|h3|h4|p|li|button|a|label|span)[^>]*>([\s\S]*?)<\/(?:title|h1|h2|h3|h4|p|li|button|a|label|span)>/gi) || [];
-  const prioritized = copyMatches
-    .join(" ")
-    .replace(/<[^>]+>/g, " ");
+  const prioritized = copyMatches.join(" ").replace(/<[^>]+>/g, " ");
 
   return decodeEntities(prioritized || content.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
@@ -100,9 +97,8 @@ function countWords(text: string, words: string[]): number {
 function detectFromHtml(html: string): PageLanguage | null {
   const text = extractVisibleText(html);
 
-  // Content is the source of truth. Many builders leave <html lang="en"> even
-  // when the actual landing-page copy is Spanish, so metadata must not override
-  // strong evidence from the visitor-facing copy.
+  // Use visitor-facing copy as the primary signal. Do not trust <html lang>
+  // first: page builders frequently leave lang="en" on Spanish pages.
   const spanishWords = [
     "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "para", "por",
     "con", "que", "como", "cómo", "qué", "más", "tu", "tus", "su", "sus", "te", "se",
@@ -111,21 +107,19 @@ function detectFromHtml(html: string): PageLanguage | null {
     "necesitas", "ayudamos", "descubre", "reserva", "agenda", "contacto", "solución", "problema",
   ];
   const englishWords = [
-    "the", "and", "a", "an", "of", "to", "for", "with", "that", "how", "what", "more", "your",
-    "you", "yourself", "clients", "client", "services", "service", "business", "businesses", "page",
-    "pages", "sales", "sale", "offer", "company", "companies", "free", "now", "can", "want", "need",
-    "help", "discover", "book", "schedule", "contact", "solution", "problem", "get", "learn",
+    "the", "and", "your", "you", "yourself", "how", "what", "more", "clients", "client", "services",
+    "service", "business", "businesses", "page", "pages", "sales", "sale", "offer", "company", "companies",
+    "free", "now", "want", "need", "help", "discover", "book", "schedule", "contact", "solution", "problem",
+    "learn", "results", "about", "get", "today", "start", "choose", "better", "people",
   ];
 
   const spanish = countWords(text, spanishWords);
   const english = countWords(text, englishWords);
 
-  // Require meaningful evidence and a margin. This avoids switching languages
-  // because of a handful of generic words such as "a", "de" or "the".
-  if (spanish >= 5 && spanish >= english * 1.25) return "es";
-  if (english >= 5 && english >= spanish * 1.25) return "en";
+  if (spanish >= 5 && spanish >= english * 1.2) return "es";
+  if (english >= 5 && english >= spanish * 1.2) return "en";
 
-  // Metadata is only a fallback when there isn't enough textual evidence.
+  // Metadata is only a fallback when copy evidence is weak or unavailable.
   const htmlLang = html.match(/<html[^>]+lang=["']([^"']+)["']/i)?.[1]?.toLowerCase();
   if (htmlLang?.startsWith("es")) return "es";
   if (htmlLang?.startsWith("en")) return "en";
@@ -147,6 +141,5 @@ export const detectPageLanguage = createServerFn({ method: "POST" })
 
     const language = detectFromHtml(html);
     console.info("HERO OS language detection", { url: data.url, language });
-
     return { language: language ?? "en" };
   });
