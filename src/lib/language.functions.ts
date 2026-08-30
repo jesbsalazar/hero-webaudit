@@ -60,17 +60,72 @@ async function fetchViaFirecrawl(url: string): Promise<string | null> {
   }
 }
 
-function stripHtml(html: string): string {
-  return html
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
+function extractVisibleText(html: string): string {
+  const content = html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<svg[\s\S]*?<\/svg>/gi, " ")
+    .replace(/<template[\s\S]*?<\/template>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ");
+
+  // Prioritize actual visitor-facing copy instead of HTML attributes, CSS and scripts.
+  const copyMatches = content.match(/<(?:title|h1|h2|h3|h4|p|li|button|a|label|span)[^>]*>([\s\S]*?)<\/(?:title|h1|h2|h3|h4|p|li|button|a|label|span)>/gi) || [];
+  const prioritized = copyMatches
+    .join(" ")
+    .replace(/<[^>]+>/g, " ");
+
+  return decodeEntities(prioritized || content.replace(/<[^>]+>/g, " "))
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .slice(0, 30000)
+    .toLowerCase();
+}
+
+function countWords(text: string, words: string[]): number {
+  const pattern = new RegExp(`\\b(?:${words.join("|")})\\b`, "gi");
+  return (text.match(pattern) || []).length;
 }
 
 function detectFromHtml(html: string): PageLanguage | null {
+  const text = extractVisibleText(html);
+
+  // Content is the source of truth. Many builders leave <html lang="en"> even
+  // when the actual landing-page copy is Spanish, so metadata must not override
+  // strong evidence from the visitor-facing copy.
+  const spanishWords = [
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "para", "por",
+    "con", "que", "como", "cómo", "qué", "más", "tu", "tus", "su", "sus", "te", "se",
+    "clientes", "cliente", "servicios", "servicio", "negocio", "negocios", "página", "paginas",
+    "ventas", "venta", "oferta", "empresa", "empresas", "gratis", "ahora", "puedes", "quieres",
+    "necesitas", "ayudamos", "descubre", "reserva", "agenda", "contacto", "solución", "problema",
+  ];
+  const englishWords = [
+    "the", "and", "a", "an", "of", "to", "for", "with", "that", "how", "what", "more", "your",
+    "you", "yourself", "clients", "client", "services", "service", "business", "businesses", "page",
+    "pages", "sales", "sale", "offer", "company", "companies", "free", "now", "can", "want", "need",
+    "help", "discover", "book", "schedule", "contact", "solution", "problem", "get", "learn",
+  ];
+
+  const spanish = countWords(text, spanishWords);
+  const english = countWords(text, englishWords);
+
+  // Require meaningful evidence and a margin. This avoids switching languages
+  // because of a handful of generic words such as "a", "de" or "the".
+  if (spanish >= 5 && spanish >= english * 1.25) return "es";
+  if (english >= 5 && english >= spanish * 1.25) return "en";
+
+  // Metadata is only a fallback when there isn't enough textual evidence.
   const htmlLang = html.match(/<html[^>]+lang=["']([^"']+)["']/i)?.[1]?.toLowerCase();
   if (htmlLang?.startsWith("es")) return "es";
   if (htmlLang?.startsWith("en")) return "en";
@@ -81,16 +136,6 @@ function detectFromHtml(html: string): PageLanguage | null {
   if (contentLanguage?.startsWith("es")) return "es";
   if (contentLanguage?.startsWith("en")) return "en";
 
-  const text = stripHtml(html).slice(0, 16000).toLowerCase();
-  const spanish =
-    (text.match(/\b(el|la|los|las|para|que|con|una|por|tu|tus|cómo|qué|más|clientes|servicios|negocio|página|ventas|oferta|empresa)\b/g) || [])
-      .length;
-  const english =
-    (text.match(/\b(the|and|for|with|your|you|how|what|more|customers|business|services|page|sales|offer|company)\b/g) || [])
-      .length;
-
-  if (spanish >= english + 3) return "es";
-  if (english >= spanish + 3) return "en";
   return null;
 }
 
@@ -100,5 +145,8 @@ export const detectPageLanguage = createServerFn({ method: "POST" })
     const html = (await fetchDirect(data.url)) || (await fetchViaFirecrawl(data.url));
     if (!html) throw new Error("language_detection_failed");
 
-    return { language: detectFromHtml(html) ?? "en" };
+    const language = detectFromHtml(html);
+    console.info("HERO OS language detection", { url: data.url, language });
+
+    return { language: language ?? "en" };
   });
