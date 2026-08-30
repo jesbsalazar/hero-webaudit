@@ -5,15 +5,9 @@ import { ensureCfTag, applyCfTag } from "@/lib/clickfunnels-tags";
 import type { AuditJson } from "@/lib/audit-types";
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
-const safeHex = (v: unknown, fallback: string) =>
-  typeof v === "string" && HEX.test(v) ? v : fallback;
+const safeHex = (v: unknown, fallback: string) => typeof v === "string" && HEX.test(v) ? v : fallback;
 
-const urlSchema = z
-  .string()
-  .trim()
-  .min(4)
-  .max(2000)
-  .regex(/^https?:\/\/[^\s]+\.[^\s]+$/i, "Invalid URL");
+const urlSchema = z.string().trim().min(4).max(2000).regex(/^https?:\/\/[^\s]+\.[^\s]+$/i, "Invalid URL");
 
 async function fetchDirect(url: string): Promise<{ html: string; finalUrl: string } | null> {
   const ctrl = new AbortController();
@@ -21,8 +15,7 @@ async function fetchDirect(url: string): Promise<{ html: string; finalUrl: strin
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
       },
@@ -32,11 +25,7 @@ async function fetchDirect(url: string): Promise<{ html: string; finalUrl: strin
     if (!res.ok) return null;
     const txt = await res.text();
     return { html: txt.slice(0, 600_000), finalUrl: res.url };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
+  } catch { return null; } finally { clearTimeout(timeout); }
 }
 
 async function fetchViaFirecrawl(url: string): Promise<{ html: string; finalUrl: string } | null> {
@@ -45,27 +34,16 @@ async function fetchViaFirecrawl(url: string): Promise<{ html: string; finalUrl:
   try {
     const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ url, formats: ["html"], onlyMainContent: false, timeout: 30000 }),
     });
-    if (!res.ok) {
-      console.error("Firecrawl fetch failed", res.status, await res.text().catch(() => ""));
-      return null;
-    }
-    const json = (await res.json()) as {
-      data?: { html?: string; rawHtml?: string; metadata?: { sourceURL?: string; url?: string } };
-    };
+    if (!res.ok) { console.error("Firecrawl fetch failed", res.status, await res.text().catch(() => "")); return null; }
+    const json = (await res.json()) as { data?: { html?: string; rawHtml?: string; metadata?: { sourceURL?: string; url?: string } } };
     const html = json.data?.html || json.data?.rawHtml;
     if (!html) return null;
     const finalUrl = json.data?.metadata?.sourceURL || json.data?.metadata?.url || url;
     return { html: html.slice(0, 600_000), finalUrl };
-  } catch (e) {
-    console.error("Firecrawl exception", e);
-    return null;
-  }
+  } catch (e) { console.error("Firecrawl exception", e); return null; }
 }
 
 async function fetchPage(url: string): Promise<{ html: string; finalUrl: string }> {
@@ -79,14 +57,20 @@ async function fetchPage(url: string): Promise<{ html: string; finalUrl: string 
 }
 
 function stripHtmlForLLM(html: string): string {
-  const cleaned = html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleaned = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<noscript[\s\S]*?<\/noscript>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ").replace(/\s+/g, " ").trim();
   return cleaned.slice(0, 40_000);
+}
+
+function detectPageLanguage(html: string, fallback: "en" | "es"): "en" | "es" {
+  const lang = html.match(/<html[^>]+lang=["']([^"']+)["']/i)?.[1]?.toLowerCase();
+  if (lang?.startsWith("es")) return "es";
+  if (lang?.startsWith("en")) return "en";
+  const text = stripHtmlForLLM(html).slice(0, 12000).toLowerCase();
+  const spanish = (text.match(/\b(el|la|los|las|para|que|con|una|por|tu|tus|cómo|qué|más|clientes|servicios|negocio)\b/g) || []).length;
+  const english = (text.match(/\b(the|and|for|with|your|you|how|what|more|customers|business|services)\b/g) || []).length;
+  if (spanish >= english + 3) return "es";
+  if (english >= spanish + 3) return "en";
+  return fallback;
 }
 
 const auditTool = {
@@ -108,11 +92,7 @@ const auditTool = {
         epiphany_bridge: { type: "object", properties: { present: { type: "boolean" }, note: { type: "string" } }, required: ["present", "note"], additionalProperties: false },
         whats_working: { type: "array", items: { type: "string" }, description: "3-5 concrete strengths." },
         opportunities: { type: "array", items: { type: "string" }, description: "3-6 actionable improvements." },
-        brand_colors: {
-          type: "object",
-          properties: { primary: { type: "string" }, accent: { type: "string" }, background: { type: "string" } },
-          required: ["primary", "accent", "background"], additionalProperties: false,
-        },
+        brand_colors: { type: "object", properties: { primary: { type: "string" }, accent: { type: "string" }, background: { type: "string" } }, required: ["primary", "accent", "background"], additionalProperties: false },
       },
       required: ["page_title", "detected_offer", "target_audience", "overall_score", "headline_clarity", "cta_strength", "big_domino", "opportunity_switch", "epiphany_bridge", "whats_working", "opportunities", "brand_colors"],
       additionalProperties: false,
@@ -127,11 +107,7 @@ async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[
   const body: Record<string, unknown> = { model: "gemini-3.6-flash", systemPrompt, userPrompt, maxTokens, temperature: 0.4 };
   if (tools) body.tools = tools;
   if (toolChoice) body.toolChoice = toolChoice;
-  const res = await fetch(`${supabaseUrl}/functions/v1/hero-web-audit-ai`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const res = await fetch(`${supabaseUrl}/functions/v1/hero-web-audit-ai`, { method: "POST", headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey, "Content-Type": "application/json" }, body: JSON.stringify(body) });
   if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
   if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
   if (!res.ok) { const txt = await res.text(); console.error("Supabase AI proxy error", res.status, txt); throw new Error("ai_error"); }
@@ -147,7 +123,10 @@ export const analyzePage = createServerFn({ method: "POST" })
       throw new Error(code === "fetch_blocked" ? "fetch_blocked" : "fetch_failed");
     });
     const cleaned = stripHtmlForLLM(html);
-    const langInstr = data.language === "es" ? "Responde TODO el contenido (notas, fortalezas, oportunidades, oferta, audiencia) en español." : "Respond with ALL content (notes, strengths, opportunities, offer, audience) in English.";
+    const pageLanguage = detectPageLanguage(html, data.language);
+    const langInstr = pageLanguage === "es"
+      ? "IDIOMA OBLIGATORIO: español nativo. Responde TODO en español. No uses frases en inglés ni spanglish. Conserva únicamente nombres propios, marcas o términos técnicos que aparezcan literalmente en la página."
+      : "REQUIRED LANGUAGE: native English. Respond ALL content in English. Do not mix languages. Preserve only proper names, brands or technical terms that literally appear on the page.";
     const system = `You are a senior conversion strategist and direct-response copywriter applying the HERO Method — a proprietary funnel framework focused on Headline clarity, Engagement of the right audience, Resonant offer mechanics, and Optimized calls-to-action.
 
 Your job: audit a landing/sales page HTML and return a structured score using the submit_funnel_audit tool.
@@ -160,7 +139,7 @@ Scoring rubric (0-100):
 - Trust (social proof, testimonials, guarantees)
 - Visual hierarchy
 
-Be brutally honest but constructive. Quote concrete improvements. Extract brand colors from the HTML when possible.
+Be brutally honest but constructive. Write like an elite conversion strategist speaking directly to the business owner. Make the roast sharp, specific and useful — never generic or insulting.
 
 ${langInstr}`;
     const aiRes = await callAI(system, `URL: ${finalUrl}\n\nHTML (truncated):\n${cleaned}`, [auditTool], { type: "function", function: { name: "submit_funnel_audit" } }, 6000);
@@ -171,18 +150,17 @@ ${langInstr}`;
     audit.brand_colors = { primary: safeHex(audit.brand_colors?.primary, "#1E90FF"), accent: safeHex(audit.brand_colors?.accent, "#C9A84C"), background: safeHex(audit.brand_colors?.background, "#0A1628") };
     audit.overall_score = Math.max(0, Math.min(100, Math.round(Number(audit.overall_score) || 0)));
     audit.headline_clarity = Math.max(0, Math.min(100, Math.round(Number(audit.headline_clarity) || 0)));
-    const { data: row, error } = await supabaseAdmin.from("funnel_audits").insert({ url_submitted: finalUrl, language: data.language, overall_score: audit.overall_score, audit_json: audit as never, brand_colors: audit.brand_colors as never }).select("id").single();
+    const { data: row, error } = await supabaseAdmin.from("funnel_audits").insert({ url_submitted: finalUrl, language: pageLanguage, overall_score: audit.overall_score, audit_json: audit as never, brand_colors: audit.brand_colors as never }).select("id").single();
     if (error || !row) { console.error("DB insert error", error); throw new Error("db_error"); }
-    return { id: row.id, audit };
+    return { id: row.id, audit, language: pageLanguage };
   });
 
 export const generateMockup = createServerFn({ method: "POST" })
   .inputValidator((input: { id: string; language: "en" | "es" }) => ({ id: z.string().uuid().parse(input.id), language: input.language === "es" ? "es" : "en" }))
   .handler(async ({ data }) => {
-    const { data: row, error } = await supabaseAdmin.from("funnel_audits").select("audit_json, brand_colors, url_submitted, mockup_html").eq("id", data.id).single();
+    const { data: row, error } = await supabaseAdmin.from("funnel_audits").select("audit_json, brand_colors, url_submitted, mockup_html, language").eq("id", data.id).single();
     if (error || !row) throw new Error("not_found");
     if (row.mockup_html) return { html: row.mockup_html };
-
     const audit = row.audit_json as AuditJson;
     const colors = row.brand_colors as AuditJson["brand_colors"];
     let originalSnippet = "";
@@ -203,8 +181,8 @@ export const generateMockup = createServerFn({ method: "POST" })
       }
     } catch (e) { console.warn("re-fetch for mockup failed", e); }
 
-    const lang = data.language === "es" ? "Todo el copy del HTML debe estar en español, natural, específico y persuasivo." : "All HTML copy must be in English, natural, specific and persuasive.";
-
+    const mockupLanguage = row.language === "es" ? "es" : "en";
+    const lang = mockupLanguage === "es" ? "Todo el copy del HTML debe estar en español nativo, natural, específico y persuasivo. No uses inglés ni spanglish salvo nombres de marca o términos que deban conservarse." : "All HTML copy must be native English, natural, specific and persuasive. Do not mix languages.";
     const system = `You are the conversion creative director behind a CRO agency. You combine conversion strategy, direct-response copywriting and clean landing-page design.
 
 THE GOAL IS COMMERCIAL, NOT TECHNICAL:
@@ -223,24 +201,24 @@ Before writing HTML, silently determine:
 Then build the page around those decisions.
 
 COPY IS THE PRIMARY DESIGN:
-1. Lead with a specific, customer-centered promise. Avoid vague “transform your life/business” language.
+1. Lead with a specific, customer-centered promise.
 2. Make the visitor recognize themselves and their problem quickly.
 3. Explain the offer in plain language before adding detail.
-4. Make the Opportunity Switch clear: explain the better way to get the desired result, using the HERO audit and real business facts.
+4. Make the Opportunity Switch clear.
 5. Use the Epiphany Bridge to move from problem → realization → solution → action.
-6. Use one primary CTA concept throughout the page. Make the CTA concrete and desirable.
-7. Rewrite weak source copy when necessary. Do not merely rearrange it.
-8. Favor short, punchy headlines and useful subheads over walls of copy.
+6. Use one primary CTA concept throughout the page.
+7. Rewrite weak source copy when necessary.
+8. Favor short, punchy headlines and useful subheads.
 9. Every section must earn its place by moving the visitor closer to action.
 10. The final section should make the next step feel obvious, low-friction and valuable.
 
 DO NOT FABRICATE:
 - No fake testimonials, reviews, awards, logos, credentials, guarantees, prices, percentages, customer counts or performance claims.
 - Use only facts and proof found in the source.
-- If proof is missing, do not invent it. Instead, strengthen clarity, mechanism, process and offer framing.
+- If proof is missing, strengthen clarity, mechanism, process and offer framing instead.
 
 VISUAL DIRECTION:
-- Make it polished, modern and clearly better than the original, but keep the design proportional to the business.
+- Make it polished, modern and clearly better than the original, but proportional to the business.
 - Preserve recognizable brand DNA: colors, tone, imagery and positioning.
 - Do not default to dark SaaS aesthetics, purple gradients, giant dashboards or excessive glassmorphism.
 - Do not turn every section into a rounded card.
@@ -248,22 +226,20 @@ VISUAL DIRECTION:
 - The hero must immediately communicate the new positioning and show the real offer.
 - Use real source images when they help sell the offer.
 - Prefer one strong visual over five decorative ones.
-- Use subtle interaction states only where useful; the page must work without JavaScript.
 
 RECOMMENDED STRUCTURE — ADAPT, DON'T FORCE:
 1. Simple header with brand and one primary CTA.
 2. Hero: eyebrow + strong outcome/problem headline + concise subheadline + CTA + relevant visual.
-3. Recognition/problem section: make the right visitor feel understood.
-4. Opportunity/mechanism: explain the better way and why it makes sense.
+3. Recognition/problem section.
+4. Opportunity/mechanism.
 5. Outcomes/benefits: 3-4 specific benefits tied to the actual offer.
 6. Proof: only real proof from the source.
-7. Offer/process: make what happens next easy to understand.
-8. Objection handling: only useful objections/FAQs.
-9. Final CTA: restate the value of taking action now.
+7. Offer/process.
+8. Objection handling when useful.
+9. Final CTA.
 
 IMPORTANT:
-A shorter page with exceptional messaging is better than a long page with filler. Do not add sections just to make the HTML bigger.
-Do not optimize for HTML size. Optimize for the moment when the owner sees the redesign and wants to buy the implementation.
+A shorter page with exceptional messaging is better than a long page with filler. Optimize for the moment when the owner sees the redesign and wants to buy the implementation.
 
 TECHNICAL REQUIREMENTS:
 - Output ONE complete self-contained HTML document beginning with <!doctype html>.
@@ -277,31 +253,12 @@ TECHNICAL REQUIREMENTS:
 - Never output explanations, markdown fences or commentary. Return raw HTML only.
 
 ${lang}`;
-
-    const user = `BRAND COLORS:
-${JSON.stringify(colors)}
-
-ORIGINAL URL:
-${row.url_submitted}
-
-SOURCE IMAGES — use only those that genuinely fit:
-${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(No usable images extracted.)"}
-
-HERO AUDIT — THIS IS THE STRATEGIC BRIEF:
-${JSON.stringify(audit, null, 2).slice(0, 10000)}
-
-ORIGINAL PAGE CONTENT — use this to understand the real business, offer, audience, voice and factual claims:
-${originalSnippet}
-
-DELIVERABLE:
-Create the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
-
+    const user = `BRAND COLORS:\n${JSON.stringify(colors)}\n\nORIGINAL URL:\n${row.url_submitted}\n\nSOURCE IMAGES — use only those that genuinely fit:\n${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(No usable images extracted.)"}\n\nHERO AUDIT — THIS IS THE STRATEGIC BRIEF:\n${JSON.stringify(audit, null, 2).slice(0, 10000)}\n\nORIGINAL PAGE CONTENT — use this to understand the real business, offer, audience, voice and factual claims:\n${originalSnippet}\n\nDELIVERABLE:\nCreate the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
     const aiRes = await callAI(system, user, undefined, undefined, 16000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) throw new Error("invalid_mockup");
     if (html.length > 140_000) html = html.slice(0, 140_000);
-
     const { error: updateError } = await supabaseAdmin.from("funnel_audits").update({ mockup_html: html }).eq("id", data.id);
     if (updateError) { console.error("Mockup DB update error", updateError); throw new Error("db_error"); }
     return { html };
