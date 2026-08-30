@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useT } from "@/lib/i18n";
 import logo from "@/assets/hero-os-logo.png";
 import { analyzePage, generateMockup, captureLead } from "@/lib/funnel.functions";
+import { detectPageLanguage } from "@/lib/language.functions";
 import { markBooked } from "@/lib/clickfunnels.functions";
 import { ClickFunnelsScheduler, SCHEDULER_URL } from "@/components/ClickFunnelsScheduler";
 import { generateAuditPDF } from "@/lib/pdf";
@@ -26,8 +27,9 @@ export const Route = createFileRoute("/")({
 type Phase = "input" | "loading" | "report" | "captured";
 
 function HomePage() {
-  const { t, lang } = useT();
+  const { t, lang, setLang } = useT();
   const analyze = useServerFn(analyzePage);
+  const detectLanguage = useServerFn(detectPageLanguage);
   const mockup = useServerFn(generateMockup);
   const capture = useServerFn(captureLead);
 
@@ -71,13 +73,22 @@ function HomePage() {
     const tick = setInterval(() => setStep((s) => (s < 2 ? s + 1 : s)), 1800);
 
     try {
-      const res = await analyze({ data: { url: normalized, language: lang } });
+      let detectedLanguage = lang;
+      try {
+        const detected = await detectLanguage({ data: { url: normalized } });
+        detectedLanguage = detected.language === "es" ? "es" : "en";
+        if (detectedLanguage !== lang) setLang(detectedLanguage);
+      } catch (detectionError) {
+        console.warn("automatic language detection failed; using current language", detectionError);
+      }
+
+      const res = await analyze({ data: { url: normalized, language: detectedLanguage } });
       clearInterval(tick);
       setStep(3);
       setAuditId(res.id);
       setAudit(res.audit);
-      // Kick off mockup generation in parallel
-      mockup({ data: { id: res.id, language: lang } })
+      // Kick off mockup generation in parallel using the detected page language.
+      mockup({ data: { id: res.id, language: detectedLanguage } })
         .then((m) => setMockupHtml(m.html))
         .catch(() => {
           /* mockup is bonus — silent fail */
