@@ -5,6 +5,10 @@ export type Lang = "en" | "es";
 const dict = {
   en: {
     nav_tagline: "Funnel Analyzer",
+    process_1: "Analyze",
+    process_2: "Roast",
+    process_3: "Redesign",
+    process_hint: "Your page goes through 3 steps",
     hero_eyebrow: "Free AI-powered audit",
     hero_title: "Is your sales page costing you customers?",
     hero_subtitle:
@@ -70,6 +74,10 @@ const dict = {
   },
   es: {
     nav_tagline: "Analizador de Funnels",
+    process_1: "Analizamos",
+    process_2: "Hacemos el roast",
+    process_3: "Rediseñamos",
+    process_hint: "Tu página pasa por 3 etapas",
     hero_eyebrow: "Auditoría gratis con IA",
     hero_title: "¿Tu página de ventas te está costando clientes?",
     hero_subtitle:
@@ -77,8 +85,8 @@ const dict = {
     url_placeholder: "https://tunegocio.com",
     analyze_btn: "Analizar mi página",
     analyzing: "Analizando…",
-    step_fetch: "Obteniendo tu página",
-    step_analyze: "Analizando copy y oferta",
+    step_fetch: "Leyendo tu página",
+    step_analyze: "Analizando mensaje y oferta",
     step_audit: "Construyendo tu auditoría",
     step_mockup: "Diseñando la maqueta",
     audit_ready: "Tu auditoría está lista",
@@ -88,9 +96,9 @@ const dict = {
     whats_working: "Lo que está funcionando",
     opportunities: "Áreas de oportunidad",
     brunson_check: "Chequeo del Método HERO",
-    big_domino: "Big Domino Statement",
-    opportunity_switch: "Opportunity Switch",
-    epiphany_bridge: "Epiphany Bridge",
+    big_domino: "Declaración Big Domino",
+    opportunity_switch: "Cambio de Oportunidad",
+    epiphany_bridge: "Puente de Epifanía",
     headline_clarity: "Claridad del Titular",
     cta_strength: "Fuerza del CTA",
     mockup_title: "Versión rediseñada por IA de tu página",
