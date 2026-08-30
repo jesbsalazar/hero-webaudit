@@ -1,19 +1,19 @@
 import { motion } from "framer-motion";
 
-type Props = { lang: "en" | "es" };
+ type Props = { lang: "en" | "es" };
 
 const assets = {
   es: [
-    { src: "/hero-process/es-analyze.webp", alt: "HERO OS — Analiza" },
-    { src: "/hero-process/es-audit.webp", alt: "HERO OS — Audita" },
-    { src: "/hero-process/es-build.webp", alt: "HERO OS — Construye" },
-    { src: "/hero-process/es-download.webp", alt: "HERO OS — Descarga" },
+    { src: "/hero-process/es-analyze.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Analiza" },
+    { src: "/hero-process/es-audit.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Audita" },
+    { src: "/hero-process/es-build.webp", fallback: "/hero-build-loading.svg", alt: "HERO OS — Construye" },
+    { src: "/hero-process/es-download.webp", fallback: "/hero-ready-loading.svg", alt: "HERO OS — Descarga" },
   ],
   en: [
-    { src: "/hero-process/en-analyze.webp", alt: "HERO OS — Analyze" },
-    { src: "/hero-process/en-audit.webp", alt: "HERO OS — Audit" },
-    { src: "/hero-process/en-build.webp", alt: "HERO OS — Build" },
-    { src: "/hero-process/en-download.webp", alt: "HERO OS — Download" },
+    { src: "/hero-process/en-analyze.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Analyze" },
+    { src: "/hero-process/en-audit.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Audit" },
+    { src: "/hero-process/en-build.webp", fallback: "/hero-build-loading.svg", alt: "HERO OS — Build" },
+    { src: "/hero-process/en-download.webp", fallback: "/hero-ready-loading.svg", alt: "HERO OS — Download" },
   ],
 } as const;
 
@@ -44,7 +44,12 @@ export function HeroProcess({ lang }: Props) {
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               decoding="async"
-              className="block h-auto w-full"
+              onError={(event) => {
+                const image = event.currentTarget;
+                if (image.src.endsWith(visual.fallback)) return;
+                image.src = visual.fallback;
+              }}
+              className="block h-auto min-h-48 w-full object-cover"
             />
           </motion.div>
         ))}
