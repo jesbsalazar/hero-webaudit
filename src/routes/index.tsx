@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({ component: HomePage });
 type Phase = "input" | "loading" | "report" | "captured";
 
 function HomePage() {
-  const { t, lang } = useT();
+  const { t, lang, setLang } = useT();
   const analyze = useServerFn(analyzePage);
   const mockup = useServerFn(generateFastMockup);
   const capture = useServerFn(captureLead);
@@ -66,8 +66,11 @@ function HomePage() {
       setAuditId(res.id);
       setAudit(res.audit);
 
+      const detectedLanguage = res.language === "es" ? "es" : "en";
+      if (detectedLanguage !== lang) setLang(detectedLanguage);
+
       // Start the lightweight mockup immediately. It runs independently while the visitor reads the roast and fills the form.
-      void mockup({ data: { id: res.id, language: lang } })
+      void mockup({ data: { id: res.id, language: detectedLanguage } })
         .then((m) => setMockupHtml(m.html))
         .catch((err) => console.warn("background mockup failed", err));
 
@@ -139,10 +142,22 @@ function HomePage() {
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-widest text-gold"><Sparkles className="h-3 w-3" />{t("hero_eyebrow")}</div>
               <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight text-foreground md:text-6xl">{t("hero_title")}</h1>
               <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">{t("hero_subtitle")}</p>
-              <form onSubmit={handleAnalyze} className="mx-auto mt-10 flex max-w-2xl flex-col gap-3 rounded-2xl border border-border/60 bg-panel p-3 shadow-2xl shadow-primary/10 sm:flex-row">
+
+              <div className="mx-auto mt-8 grid max-w-3xl grid-cols-3 gap-2 md:gap-4">
+                {[t("process_1"), t("process_2"), t("process_3")].map((label, index) => (
+                  <motion.div key={label} whileHover={{ y: -3 }} className="group rounded-2xl border border-gold/20 bg-panel/60 p-3 shadow-lg shadow-black/10 backdrop-blur-sm md:p-4">
+                    <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-gold/35 bg-gold/10 text-xs font-bold text-gold md:h-10 md:w-10">0{index + 1}</div>
+                    <div className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-foreground/90 md:text-xs">{label}</div>
+                    <div className="mx-auto mt-2 h-px w-8 bg-gold/30 transition-all group-hover:w-12" />
+                  </motion.div>
+                ))}
+              </div>
+
+              <form onSubmit={handleAnalyze} className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-gold/20 bg-panel p-3 shadow-2xl shadow-primary/10 sm:flex-row">
                 <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder={t("url_placeholder")} className="h-12 flex-1 border-0 bg-transparent text-base focus-visible:ring-0" inputMode="url" autoComplete="url" />
                 <Button type="submit" size="lg" className="h-12 bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary/90">{t("analyze_btn")} <ArrowRight className="h-4 w-4" /></Button>
               </form>
+              <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70">{t("process_hint")}</p>
             </motion.section>
           )}
 
