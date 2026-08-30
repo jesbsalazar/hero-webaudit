@@ -4,25 +4,41 @@ import logo from "@/assets/hero-os-logo.png";
 
 export function Navbar() {
   const { lang, setLang, t } = useT();
+  const process = [t("process_1"), t("process_2"), t("process_3")];
+
+  const ProcessStrip = ({ mobile = false }: { mobile?: boolean }) => (
+    <div className={`${mobile ? "flex md:hidden border-t border-border/30 px-4 py-2 overflow-x-auto" : "hidden md:flex"} items-center gap-2 ${mobile ? "justify-center" : "rounded-full border border-gold/20 bg-panel/70 px-4 py-2"}`}>
+      {!mobile && <span className="mr-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("process_hint")}</span>}
+      {process.map((item, index) => (
+        <div key={item} className="flex shrink-0 items-center gap-2">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border border-gold/30 bg-gold/10 text-[10px] font-bold text-gold">{index + 1}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-foreground/80">{item}</span>
+          {index < process.length - 1 && <span className="text-gold/40">→</span>}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="flex items-center gap-3">
+    <header className="sticky top-0 z-50 border-b border-border/50 bg-background/90 backdrop-blur-xl">
+      <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-4 px-4 py-2">
+        <Link to="/" className="flex shrink-0 items-center gap-3">
           <img src={logo} alt="HERO OS" width={36} height={36} className="h-9 w-9" />
           <div className="leading-tight">
             <div className="text-sm font-bold tracking-wide text-foreground">HERO OS</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-gold">
-              {t("nav_tagline")}
-            </div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-gold">{t("nav_tagline")}</div>
           </div>
         </Link>
+
+        <ProcessStrip />
+
         <div className="flex items-center gap-1 rounded-full border border-border/60 bg-panel p-1">
-          {(["en", "es"] as const).map((l) => (
+          {["en", "es"].map((l) => (
             <button
               key={l}
-              onClick={() => setLang(l)}
+              onClick={() => setLang(l as "en" | "es")}
               className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
-                lang === l ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                lang === l ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {l}
@@ -30,6 +46,7 @@ export function Navbar() {
           ))}
         </div>
       </div>
+      <ProcessStrip mobile />
     </header>
   );
 }
