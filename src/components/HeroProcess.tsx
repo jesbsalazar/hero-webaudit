@@ -1,24 +1,30 @@
 import { motion } from "framer-motion";
 
- type Props = { lang: "en" | "es" };
+type Props = { lang: "en" | "es" };
 
 const assets = {
-  es: [
-    { src: "/hero-process/es-analyze.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Analiza" },
-    { src: "/hero-process/es-audit.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Audita" },
-    { src: "/hero-process/es-build.webp", fallback: "/hero-build-loading.svg", alt: "HERO OS — Construye" },
-    { src: "/hero-process/es-download.webp", fallback: "/hero-ready-loading.svg", alt: "HERO OS — Descarga" },
-  ],
-  en: [
-    { src: "/hero-process/en-analyze.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Analyze" },
-    { src: "/hero-process/en-audit.webp", fallback: "/hero-audit-loading.svg", alt: "HERO OS — Audit" },
-    { src: "/hero-process/en-build.webp", fallback: "/hero-build-loading.svg", alt: "HERO OS — Build" },
-    { src: "/hero-process/en-download.webp", fallback: "/hero-ready-loading.svg", alt: "HERO OS — Download" },
-  ],
+  es: {
+    src: "/hero-process/process-es.webp",
+    alt: "HERO OS — Analiza, Audita, Construye y Descarga",
+  },
+  en: {
+    src: "/hero-process/process-en.webp",
+    alt: "HERO OS — Analyze, Audit, Build and Download",
+  },
 } as const;
 
+const steps = [
+  { title: "Analyze", position: "0% 0%" },
+  { title: "Audit", position: "100% 0%" },
+  { title: "Build", position: "0% 100%" },
+  { title: "Download", position: "100% 100%" },
+] as const;
+
 export function HeroProcess({ lang }: Props) {
-  const visuals = assets[lang];
+  const visual = assets[lang];
+  const labels = lang === "es"
+    ? ["Analiza", "Audita", "Construye", "Descarga"]
+    : ["Analyze", "Audit", "Build", "Download"];
 
   return (
     <section
@@ -28,31 +34,39 @@ export function HeroProcess({ lang }: Props) {
       <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-violet-600/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-40 bottom-20 h-96 w-96 rounded-full bg-teal-400/10 blur-3xl" />
 
-      <div className="relative z-10 mx-auto max-w-6xl space-y-5">
-        {visuals.map((visual, index) => (
-          <motion.div
-            key={visual.src}
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.12 }}
-            transition={{ duration: 0.45, delay: index * 0.05 }}
-            className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl"
-          >
-            <img
-              src={visual.src}
-              alt={visual.alt}
-              loading={index === 0 ? "eager" : "lazy"}
-              fetchPriority={index === 0 ? "high" : "auto"}
-              decoding="async"
-              onError={(event) => {
-                const image = event.currentTarget;
-                if (image.src.endsWith(visual.fallback)) return;
-                image.src = visual.fallback;
-              }}
-              className="block h-auto min-h-48 w-full object-cover"
-            />
-          </motion.div>
-        ))}
+      <div className="relative z-10 mx-auto max-w-6xl">
+        <div className="mb-6 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-white/45">
+            {lang === "es" ? "Así funciona HERO OS" : "How HERO OS works"}
+          </p>
+          <h2 className="mt-2 text-2xl font-bold text-white md:text-4xl">
+            {lang === "es" ? "De tu página actual a una página que convierte." : "From your current page to a page built to convert."}
+          </h2>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {steps.map((step, index) => (
+            <motion.div
+              key={step.title}
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.4, delay: index * 0.06 }}
+              className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-2xl"
+            >
+              <div
+                role="img"
+                aria-label={`${index + 1}. ${labels[index]}`}
+                className="aspect-[3/2] w-full bg-no-repeat"
+                style={{
+                  backgroundImage: `url(${visual.src})`,
+                  backgroundSize: "200% 200%",
+                  backgroundPosition: step.position,
+                }}
+              />
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );
