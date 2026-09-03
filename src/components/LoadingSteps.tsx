@@ -1,12 +1,16 @@
 import { motion } from "framer-motion";
 import { Check, Loader2 } from "lucide-react";
 import { useT } from "@/lib/i18n";
+import { StepIllustration } from "./StepIllustration";
 
 export function LoadingSteps({ active }: { active: number }) {
   const { t } = useT();
   const steps = [t("step_fetch"), t("step_analyze"), t("step_audit"), t("step_mockup")] as const;
   return (
-    <div className="mx-auto max-w-md space-y-3">
+    <>
+      <StepIllustration active={active} />
+      <div className="mx-auto max-w-md space-y-3">
+
       {steps.map((label, i) => {
         const done = i < active;
         const current = i === active;
