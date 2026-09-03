@@ -47,6 +47,8 @@ export function LoadingSteps({ active }: { active: number }) {
           </motion.div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
+
 }
