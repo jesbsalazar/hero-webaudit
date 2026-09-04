@@ -470,8 +470,22 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      <footer className="mt-20 border-t border-border/40 py-6 text-center text-xs text-muted-foreground">
-        {t("footer")}
+      <footer className="mt-16 border-t border-border/40 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-sm font-bold text-foreground">Jesus Salazar</div>
+            <div className="mt-1 text-xs text-muted-foreground">{L.footer_role}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{L.footer_place}</div>
+          </div>
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <a href="#top" className="hover:text-foreground">{L.footer_home}</a>
+            <a href="#audit" className="hover:text-foreground">{L.nav.audit}</a>
+            <a href="#services" className="hover:text-foreground">{L.nav.services}</a>
+            <a href="#industries" className="hover:text-foreground">{L.nav.industries}</a>
+            <a href="#about" className="hover:text-foreground">{L.nav.about}</a>
+            <a href="#contact" className="hover:text-foreground">{L.nav.contact}</a>
+          </nav>
+        </div>
       </footer>
     </div>
   );
