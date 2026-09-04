@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const SITE = "https://hero-webaudit.lovable.app";
+const SITE = "https://hero.jsbusinesscoach.com";
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {

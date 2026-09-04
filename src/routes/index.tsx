@@ -19,15 +19,88 @@ import { markBooked } from "@/lib/clickfunnels.functions";
 import { ClickFunnelsScheduler, SCHEDULER_URL } from "@/components/ClickFunnelsScheduler";
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
+import { landing } from "@/components/landing/content";
+import {
+  AuditIntro,
+  ProblemSection,
+  SystemSection,
+  ServicesSection,
+  IndustriesSection,
+  LocalSection,
+  BilingualSection,
+  HowItWorksSection,
+  AboutSection,
+  OutcomesSection,
+  FinalCTASection,
+} from "@/components/landing/Sections";
+
+function scrollToAudit() {
+  if (typeof document === "undefined") return;
+  document.getElementById("audit")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const SITE = "https://hero.jsbusinesscoach.com";
+const TITLE = "Local Business Marketing Dallas–Fort Worth | Lead Generation & CRO";
+const DESC =
+  "We help Dallas–Fort Worth home service and local businesses turn traffic into qualified leads, booked appointments and revenue with conversion-focused websites, funnels, AI and automation. Free AI website audit.";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  head: () => ({
+    meta: [
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE + "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: TITLE },
+      { name: "twitter:description", content: DESC },
+    ],
+    links: [{ rel: "canonical", href: SITE + "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ProfessionalService",
+          name: "Jesus Salazar — Local Business Growth & Customer Acquisition",
+          url: SITE + "/",
+          description: DESC,
+          areaServed: [
+            "Dallas",
+            "Fort Worth",
+            "Plano",
+            "Frisco",
+            "McKinney",
+            "Allen",
+            "Arlington",
+            "Irving",
+            "Carrollton",
+            "Grapevine",
+          ].map((c) => ({ "@type": "City", name: c })),
+          address: { "@type": "PostalAddress", addressRegion: "TX", addressCountry: "US" },
+          availableLanguage: ["en", "es"],
+          knowsAbout: [
+            "local business marketing",
+            "home services marketing",
+            "lead generation",
+            "website conversion optimization",
+            "marketing automation",
+            "paid advertising",
+          ],
+        }),
+      },
+    ],
+  }),
 });
 
 type Phase = "input" | "loading" | "report" | "captured";
 
 function HomePage() {
   const { t, lang, setLang } = useT();
+  const L = landing[lang];
   const analyze = useServerFn(analyzePage);
   const detectLanguage = useServerFn(detectPageLanguage);
   const mockup = useServerFn(generateMockup);
@@ -178,52 +251,82 @@ function HomePage() {
       <main className="mx-auto max-w-6xl px-4 py-10 md:py-16">
         <AnimatePresence mode="wait">
           {phase === "input" && (
-            <motion.section
-              key="hero"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-center"
-            >
-              <img
-                src={logo}
-                alt="HERO OS"
-                width={120}
-                height={120}
-                className="mx-auto mb-6 h-24 w-24 md:h-28 md:w-28"
-              />
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-medium uppercase tracking-widest text-gold">
-                <Sparkles className="h-3 w-3" />
-                {t("hero_eyebrow")}
-              </div>
-              <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold leading-tight tracking-tight text-foreground md:text-6xl">
-                {t("hero_title")}
-              </h1>
-              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-                {t("hero_subtitle")}
-              </p>
-
-              <form
-                onSubmit={handleAnalyze}
-                className="mx-auto mt-10 flex max-w-2xl flex-col gap-3 rounded-2xl border border-border/60 bg-panel p-3 shadow-2xl shadow-primary/10 sm:flex-row"
-              >
-                <Input
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder={t("url_placeholder")}
-                  className="h-12 flex-1 border-0 bg-transparent text-base focus-visible:ring-0"
-                  inputMode="url"
-                  autoComplete="url"
+            <motion.div key="hero" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+              <section className="pb-8 pt-4 text-center md:pb-14">
+                <img
+                  src={logo}
+                  alt="HERO OS — local business growth systems"
+                  width={120}
+                  height={120}
+                  className="mx-auto mb-6 h-20 w-20 md:h-24 md:w-24"
                 />
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-12 bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary/90"
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-primary">
+                  <Sparkles className="h-3 w-3" />
+                  {L.hero_eyebrow}
+                </div>
+                <h1 className="mx-auto max-w-4xl text-balance text-4xl font-bold leading-[1.08] tracking-tight text-foreground md:text-6xl">
+                  {L.hero_title}
+                </h1>
+                <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
+                  {L.hero_sub}
+                </p>
+                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <Button
+                    size="lg"
+                    onClick={scrollToAudit}
+                    className="h-13 w-full bg-primary px-7 py-3 text-base font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto"
+                  >
+                    {L.hero_cta} <ArrowRight className="h-4 w-4" />
+                  </Button>
+                  <a href="#how-it-works" className="w-full sm:w-auto">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="h-13 w-full border-border/70 px-7 py-3 text-base font-semibold text-foreground hover:bg-panel sm:w-auto"
+                    >
+                      {L.hero_cta2}
+                    </Button>
+                  </a>
+                </div>
+                <p className="mt-5 text-xs text-muted-foreground/80">{L.hero_trust}</p>
+              </section>
+
+              <section id="audit" className="scroll-mt-20 py-10 md:py-16">
+                <AuditIntro />
+                <form
+                  onSubmit={handleAnalyze}
+                  className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 rounded-2xl border border-border/60 bg-panel p-3 shadow-2xl shadow-primary/10 sm:flex-row"
                 >
-                  {t("analyze_btn")} <ArrowRight className="h-4 w-4" />
-                </Button>
-              </form>
-            </motion.section>
+                  <Input
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder={t("url_placeholder")}
+                    className="h-12 flex-1 border-0 bg-transparent text-base focus-visible:ring-0"
+                    inputMode="url"
+                    autoComplete="url"
+                    aria-label={t("url_placeholder")}
+                  />
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="h-12 bg-primary px-6 font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    {L.audit_cta} <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </form>
+              </section>
+
+              <ProblemSection />
+              <SystemSection />
+              <ServicesSection />
+              <IndustriesSection />
+              <LocalSection />
+              <BilingualSection />
+              <HowItWorksSection />
+              <AboutSection />
+              <OutcomesSection />
+              <FinalCTASection callUrl={SCHEDULER_URL} />
+            </motion.div>
           )}
 
           {phase === "loading" && (
@@ -420,8 +523,22 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      <footer className="mt-20 border-t border-border/40 py-6 text-center text-xs text-muted-foreground">
-        {t("footer")}
+      <footer className="mt-16 border-t border-border/40 py-10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-sm font-bold text-foreground">Jesus Salazar</div>
+            <div className="mt-1 text-xs text-muted-foreground">{L.footer_role}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{L.footer_place}</div>
+          </div>
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <a href="#top" className="hover:text-foreground">{L.footer_home}</a>
+            <a href="#audit" className="hover:text-foreground">{L.nav.audit}</a>
+            <a href="#services" className="hover:text-foreground">{L.nav.services}</a>
+            <a href="#industries" className="hover:text-foreground">{L.nav.industries}</a>
+            <a href="#about" className="hover:text-foreground">{L.nav.about}</a>
+            <a href="#contact" className="hover:text-foreground">{L.nav.contact}</a>
+          </nav>
+        </div>
       </footer>
     </div>
   );
