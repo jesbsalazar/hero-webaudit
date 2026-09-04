@@ -39,8 +39,61 @@ function scrollToAudit() {
   document.getElementById("audit")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+const SITE = "https://hero.jsbusinesscoach.com";
+const TITLE = "Local Business Marketing Dallas–Fort Worth | Lead Generation & CRO";
+const DESC =
+  "We help Dallas–Fort Worth home service and local businesses turn traffic into qualified leads, booked appointments and revenue with conversion-focused websites, funnels, AI and automation. Free AI website audit.";
+
 export const Route = createFileRoute("/")({
   component: HomePage,
+  head: () => ({
+    meta: [
+      { title: TITLE },
+      { name: "description", content: DESC },
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESC },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE + "/" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: TITLE },
+      { name: "twitter:description", content: DESC },
+    ],
+    links: [{ rel: "canonical", href: SITE + "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ProfessionalService",
+          name: "Jesus Salazar — Local Business Growth & Customer Acquisition",
+          url: SITE + "/",
+          description: DESC,
+          areaServed: [
+            "Dallas",
+            "Fort Worth",
+            "Plano",
+            "Frisco",
+            "McKinney",
+            "Allen",
+            "Arlington",
+            "Irving",
+            "Carrollton",
+            "Grapevine",
+          ].map((c) => ({ "@type": "City", name: c })),
+          address: { "@type": "PostalAddress", addressRegion: "TX", addressCountry: "US" },
+          availableLanguage: ["en", "es"],
+          knowsAbout: [
+            "local business marketing",
+            "home services marketing",
+            "lead generation",
+            "website conversion optimization",
+            "marketing automation",
+            "paid advertising",
+          ],
+        }),
+      },
+    ],
+  }),
 });
 
 type Phase = "input" | "loading" | "report" | "captured";
