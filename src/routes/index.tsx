@@ -19,6 +19,25 @@ import { markBooked } from "@/lib/clickfunnels.functions";
 import { ClickFunnelsScheduler, SCHEDULER_URL } from "@/components/ClickFunnelsScheduler";
 import { generateAuditPDF } from "@/lib/pdf";
 import type { AuditJson } from "@/lib/audit-types";
+import { landing } from "@/components/landing/content";
+import {
+  AuditIntro,
+  ProblemSection,
+  SystemSection,
+  ServicesSection,
+  IndustriesSection,
+  LocalSection,
+  BilingualSection,
+  HowItWorksSection,
+  AboutSection,
+  OutcomesSection,
+  FinalCTASection,
+} from "@/components/landing/Sections";
+
+function scrollToAudit() {
+  if (typeof document === "undefined") return;
+  document.getElementById("audit")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 export const Route = createFileRoute("/")({
   component: HomePage,
