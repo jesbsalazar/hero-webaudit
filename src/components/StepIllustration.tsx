@@ -1,17 +1,21 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useT } from "@/lib/i18n";
-import s1en from "@/assets/steps/step1-en.png.asset.json";
-import s2en from "@/assets/steps/step2-en.png.asset.json";
-import s3en from "@/assets/steps/step3-en.png.asset.json";
-import s4en from "@/assets/steps/step4-en.png.asset.json";
-import s1es from "@/assets/steps/step1-es.png.asset.json";
-import s2es from "@/assets/steps/step2-es.png.asset.json";
-import s3es from "@/assets/steps/step3-es.png.asset.json";
-import s4es from "@/assets/steps/step4-es.png.asset.json";
+
+const SUPABASE_ASSETS = "https://gulqtribvatpvfptqmqr.supabase.co/storage/v1/object/public/hero-audit-assets";
 
 const IMAGES = {
-  en: [s1en.url, s2en.url, s3en.url, s4en.url],
-  es: [s1es.url, s2es.url, s3es.url, s4es.url],
+  en: [
+    `${SUPABASE_ASSETS}/step1-en.png`,
+    `${SUPABASE_ASSETS}/step2-en.png`,
+    `${SUPABASE_ASSETS}/step3-en.png`,
+    `${SUPABASE_ASSETS}/step4-en.png`,
+  ],
+  es: [
+    `${SUPABASE_ASSETS}/step1-es.png`,
+    `${SUPABASE_ASSETS}/step2-es.png`,
+    `${SUPABASE_ASSETS}/step3-es.png`,
+    `${SUPABASE_ASSETS}/step4-es.png`,
+  ],
 };
 
 const ALTS = {
