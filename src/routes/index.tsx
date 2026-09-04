@@ -47,6 +47,7 @@ type Phase = "input" | "loading" | "report" | "captured";
 
 function HomePage() {
   const { t, lang, setLang } = useT();
+  const L = landing[lang];
   const analyze = useServerFn(analyzePage);
   const detectLanguage = useServerFn(detectPageLanguage);
   const mockup = useServerFn(generateMockup);
