@@ -3,7 +3,7 @@ import type { Lang } from "@/lib/i18n";
 export const landing = {
   en: {
     hero_eyebrow: "Local Business Growth & Customer Acquisition",
-    hero_title: "Your Website Should Generate Customers — Not Just Look Good.",
+    hero_title: "YOUR WEBSITE SHOULD GENERATE CUSTOMERS not just look good.",
     hero_sub:
       "We help Dallas–Fort Worth local businesses turn traffic into qualified leads, booked appointments and revenue using conversion-focused websites, funnels, AI and automation.",
     hero_cta: "Get Your Free AI Website Audit",
@@ -147,7 +147,7 @@ export const landing = {
 
   es: {
     hero_eyebrow: "Crecimiento y Adquisición de Clientes para Negocios Locales",
-    hero_title: "Tu sitio web debe generar clientes — no solo verse bien.",
+    hero_title: "TU SITIO WEB DEBE GENERAR CLIENTES no solo verse bien.",
     hero_sub:
       "Ayudamos a negocios locales de Dallas–Fort Worth a convertir su tráfico en prospectos calificados, citas agendadas e ingresos, con sitios enfocados en conversión, funnels, IA y automatización.",
     hero_cta: "Obtén tu auditoría web gratis con IA",
