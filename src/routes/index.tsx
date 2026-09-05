@@ -118,6 +118,13 @@ function HomePage() {
   const [booked, setBooked] = useState(false);
   const mark = useServerFn(markBooked);
 
+  // Always open the landing at the hero, not mid-page
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
+
   const handleBooked = async () => {
     setBooked(true);
     if (!auditId) return;
