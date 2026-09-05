@@ -2,13 +2,14 @@ import type { Lang } from "@/lib/i18n";
 
 export const landing = {
   en: {
-    hero_eyebrow: "Local Business Growth & Customer Acquisition",
-    hero_title: "YOUR WEBSITE SHOULD GENERATE CUSTOMERS not just look good.",
+    hero_eyebrow: "Business Growth & Customer Acquisition",
+    hero_title_a: "YOUR WEBSITE SHOULD GENERATE CUSTOMERS",
+    hero_title_b: "not just look good.",
     hero_sub:
-      "We help Dallas–Fort Worth local businesses turn traffic into qualified leads, booked appointments and revenue using conversion-focused websites, funnels, AI and automation.",
+      "We help service businesses turn traffic into qualified leads, booked appointments and revenue using conversion-focused websites, funnels, AI and automation.",
     hero_cta: "Get Your Free AI Website Audit",
     hero_cta2: "See How It Works",
-    hero_trust: "Built for local service businesses • Dallas–Fort Worth • English & Spanish",
+    hero_trust: "Built for service businesses • Dallas–Fort Worth & worldwide • English & Spanish",
 
     audit_title: "What's Your Website Costing You?",
     audit_sub: "Your website may be losing leads every day without you realizing it.",
@@ -97,7 +98,7 @@ export const landing = {
       "Carrollton",
       "Grapevine",
     ],
-    local_cities_note: "and surrounding DFW communities",
+    local_cities_note: "and surrounding DFW communities — we also serve businesses worldwide",
 
     bilingual_title: "English or Spanish. Same goal: More Customers.",
     bilingual_copy:
@@ -146,13 +147,14 @@ export const landing = {
   },
 
   es: {
-    hero_eyebrow: "Crecimiento y Adquisición de Clientes para Negocios Locales",
-    hero_title: "TU SITIO WEB DEBE GENERAR CLIENTES no solo verse bien.",
+    hero_eyebrow: "Crecimiento y Adquisición de Clientes",
+    hero_title_a: "TU SITIO WEB DEBE GENERAR CLIENTES",
+    hero_title_b: "no solo verse bien.",
     hero_sub:
-      "Ayudamos a negocios locales de Dallas–Fort Worth a convertir su tráfico en prospectos calificados, citas agendadas e ingresos, con sitios enfocados en conversión, funnels, IA y automatización.",
+      "Ayudamos a negocios de servicios a convertir su tráfico en prospectos calificados, citas agendadas e ingresos, con sitios enfocados en conversión, funnels, IA y automatización.",
     hero_cta: "Obtén tu auditoría web gratis con IA",
     hero_cta2: "Ver cómo funciona",
-    hero_trust: "Hecho para negocios de servicios locales • Dallas–Fort Worth • Inglés y Español",
+    hero_trust: "Hecho para negocios de servicios • Dallas–Fort Worth y todo el mundo • Inglés y Español",
 
     audit_title: "¿Cuánto te está costando tu sitio web?",
     audit_sub: "Tu sitio puede estar perdiendo prospectos todos los días sin que lo notes.",
@@ -241,7 +243,7 @@ export const landing = {
       "Carrollton",
       "Grapevine",
     ],
-    local_cities_note: "y comunidades cercanas del área DFW",
+    local_cities_note: "y comunidades cercanas del área DFW — también atendemos negocios en todo el mundo",
 
     bilingual_title: "Inglés o español. El mismo objetivo: más clientes.",
     bilingual_copy:
