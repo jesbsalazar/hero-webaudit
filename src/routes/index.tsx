@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Download, Calendar, Sparkles, Lock, RotateCcw } from "lucide-react";
@@ -264,8 +264,9 @@ function HomePage() {
                   <Sparkles className="h-3 w-3" />
                   {L.hero_eyebrow}
                 </div>
-                <h1 className="mx-auto max-w-4xl text-balance text-4xl font-bold leading-[1.08] tracking-tight text-foreground md:text-6xl">
-                  {L.hero_title}
+                <h1 className="mx-auto max-w-4xl text-balance text-4xl font-bold leading-[1.08] tracking-tight md:text-6xl">
+                  <span className="text-primary">{L.hero_title_a}</span>{" "}
+                  <span className="text-foreground">{L.hero_title_b}</span>
                 </h1>
                 <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
                   {L.hero_sub}
