@@ -30,7 +30,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Local Business Growth & Customer Acquisition | Dallas–Fort Worth" },
+      { title: "Website Lead Generation Dallas–Fort Worth | HERO OS" },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "HERO OS" },
       { name: "twitter:card", content: "summary_large_image" },

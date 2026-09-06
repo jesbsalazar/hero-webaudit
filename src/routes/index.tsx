@@ -40,9 +40,9 @@ function scrollToAudit() {
 }
 
 const SITE = "https://hero.jsbusinesscoach.com";
-const TITLE = "Local Business Marketing Dallas–Fort Worth | Lead Generation & CRO";
+const TITLE = "Website Lead Generation Dallas–Fort Worth | HERO OS";
 const DESC =
-  "We help Dallas–Fort Worth home service and local businesses turn traffic into qualified leads, booked appointments and revenue with conversion-focused websites, funnels, AI and automation. Free AI website audit.";
+  "HERO OS helps service businesses in Dallas–Fort Worth and worldwide generate qualified leads with conversion-focused websites, AI and automation.";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -79,7 +79,9 @@ export const Route = createFileRoute("/")({
             "Irving",
             "Carrollton",
             "Grapevine",
-          ].map((c) => ({ "@type": "City", name: c })),
+          ].map((c) => ({ "@type": "City", name: c })).concat([
+            { "@type": "Place", name: "Worldwide" },
+          ]),
           address: { "@type": "PostalAddress", addressRegion: "TX", addressCountry: "US" },
           availableLanguage: ["en", "es"],
           knowsAbout: [
