@@ -121,23 +121,50 @@ const auditTool = {
 } as const;
 
 async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[], toolChoice?: unknown, maxTokens = 12000) {
-  // AI runs on the user's own Supabase project (edge function hero-web-audit-ai),
-  // which may differ from the Lovable Cloud backend URL in env.
-  const proxyUrl = process.env.AI_PROXY_URL
-    ?? (process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL}/functions/v1/hero-web-audit-ai` : undefined);
-  const proxyKey = process.env.AI_PROXY_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!proxyUrl || !proxyKey) throw new Error("Supabase AI proxy not configured");
-  const body: Record<string, unknown> = { model: "gemini-3.6-flash", systemPrompt, userPrompt, maxTokens, temperature: 0.4 };
-  if (tools) body.tools = tools;
-  if (toolChoice) body.toolChoice = toolChoice;
-  const res = await fetch(proxyUrl, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${proxyKey}`, apikey: proxyKey, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const proxyUrl = process.env.AI_PROXY_URL;
+  const proxyKey = process.env.AI_PROXY_KEY;
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  let endpoint: string;
+  let headers: Record<string, string>;
+  let body: Record<string, unknown>;
+
+  if (proxyUrl && proxyKey) {
+    endpoint = proxyUrl;
+    headers = { Authorization: `Bearer ${proxyKey}`, apikey: proxyKey, "Content-Type": "application/json" };
+    body = { model: "gemini-3.6-flash", systemPrompt, userPrompt, maxTokens, temperature: 0.4 };
+    if (tools) body.tools = tools;
+    if (toolChoice) body.toolChoice = toolChoice;
+  } else if (lovableKey) {
+    endpoint = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    headers = { Authorization: `Bearer ${lovableKey}`, "Content-Type": "application/json" };
+    body = {
+      model: "google/gemini-3-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: maxTokens,
+      temperature: 0.4,
+    };
+    if (tools) body.tools = tools;
+    if (toolChoice) body.tool_choice = toolChoice;
+  } else if (supabaseUrl && serviceRoleKey) {
+    endpoint = `${supabaseUrl}/functions/v1/hero-web-audit-ai`;
+    headers = { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey, "Content-Type": "application/json" };
+    body = { model: "gemini-3.6-flash", systemPrompt, userPrompt, maxTokens, temperature: 0.4 };
+    if (tools) body.tools = tools;
+    if (toolChoice) body.toolChoice = toolChoice;
+  } else {
+    throw new Error("ai_not_configured");
+  }
+
+  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
   if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
   if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
-  if (!res.ok) { const txt = await res.text(); console.error("Supabase AI proxy error", res.status, txt); throw new Error("ai_error"); }
+  if (!res.ok) { const txt = await res.text(); console.error("AI request error", res.status, txt); throw new Error("ai_error"); }
   return res.json();
 }
 
