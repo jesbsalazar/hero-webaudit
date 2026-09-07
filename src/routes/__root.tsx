@@ -35,10 +35,14 @@ export const Route = createRootRoute({
       { property: "og:site_name", content: "HERO OS" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1" },
+      { name: "cf-page-token", content: "cfp_BKxdE2SyJ166vR0Qn4CZmXyo" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", sizes: "256x256" },
+    ],
+    scripts: [
+      { src: "https://sdk.myclickfunnels.com/sdk.js", defer: true },
     ],
   }),
   shellComponent: RootShell,
