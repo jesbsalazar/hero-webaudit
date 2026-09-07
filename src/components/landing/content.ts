@@ -144,6 +144,15 @@ export const landing = {
     footer_role: "Local Business Growth & Customer Acquisition",
     footer_place: "Dallas–Fort Worth, Texas · English & Spanish",
     footer_home: "Home",
+
+    contact_name: "Jesús Salazar",
+    contact_role: "Funnel Builder & Business Strategist",
+    contact_place: "Dallas–Fort Worth, Texas",
+    contact_email: "jesus@jsbusinesscoach.com",
+    contact_email_label: "Email",
+    social_linkedin: "LinkedIn",
+    social_instagram: "Instagram",
+    social_facebook: "Facebook",
   },
 
   es: {
@@ -289,6 +298,15 @@ export const landing = {
     footer_role: "Crecimiento y Adquisición de Clientes para Negocios Locales",
     footer_place: "Dallas–Fort Worth, Texas · Inglés y Español",
     footer_home: "Inicio",
+
+    contact_name: "Jesús Salazar",
+    contact_role: "Funnel Builder & Estratega de Negocios",
+    contact_place: "Dallas–Fort Worth, Texas",
+    contact_email: "jesus@jsbusinesscoach.com",
+    contact_email_label: "Correo",
+    social_linkedin: "LinkedIn",
+    social_instagram: "Instagram",
+    social_facebook: "Facebook",
   },
 } as const;
 
