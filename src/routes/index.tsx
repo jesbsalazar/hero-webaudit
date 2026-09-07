@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, Download, Calendar, Sparkles, Lock, RotateCcw } from "lucide-react";
+import { ArrowRight, Download, Calendar, Sparkles, Lock, RotateCcw, Linkedin, Instagram, Facebook, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
