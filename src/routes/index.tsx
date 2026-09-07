@@ -533,12 +533,48 @@ function HomePage() {
         </AnimatePresence>
       </main>
 
-      <footer className="mt-16 border-t border-border/40 py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="text-sm font-bold text-foreground">Jesus Salazar</div>
-            <div className="mt-1 text-xs text-muted-foreground">{L.footer_role}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{L.footer_place}</div>
+      <footer className="mt-16 border-t border-border/40 py-12">
+        <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-sm">
+            <div className="text-base font-bold text-foreground">{L.contact_name}</div>
+            <div className="mt-1 text-sm font-semibold text-primary">{L.contact_role}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{L.contact_place}</div>
+            <a
+              href={`mailto:${L.contact_email}`}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+            >
+              <Mail className="h-4 w-4" />
+              {L.contact_email}
+            </a>
+            <div className="mt-5 flex items-center gap-3">
+              <a
+                href="https://linkedin.com/in/jesusesalazar"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-panel px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              >
+                <Linkedin className="h-3.5 w-3.5" />
+                {L.social_linkedin}
+              </a>
+              <a
+                href="https://instagram.com/jesusesalazarb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-panel px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              >
+                <Instagram className="h-3.5 w-3.5" />
+                {L.social_instagram}
+              </a>
+              <a
+                href="https://facebook.com/jesusesalazarb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-panel px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/50 hover:text-foreground"
+              >
+                <Facebook className="h-3.5 w-3.5" />
+                {L.social_facebook}
+              </a>
+            </div>
           </div>
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
             <a href="#top" className="hover:text-foreground">{L.footer_home}</a>
@@ -548,6 +584,9 @@ function HomePage() {
             <a href="#about" className="hover:text-foreground">{L.nav.about}</a>
             <a href="#contact" className="hover:text-foreground">{L.nav.contact}</a>
           </nav>
+        </div>
+        <div className="mx-auto mt-10 max-w-6xl px-4 text-center text-[10px] text-muted-foreground/70">
+          {L.footer_place}
         </div>
       </footer>
     </div>
