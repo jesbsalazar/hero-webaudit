@@ -340,7 +340,7 @@ ${originalSnippet}
 DELIVERABLE:
 Create the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
 
-    const aiRes = await callAI(system, user, undefined, undefined, 10000);
+    const aiRes = await callAI(system, user, undefined, undefined, 7000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) throw new Error("invalid_mockup");
