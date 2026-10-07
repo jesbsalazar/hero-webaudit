@@ -161,11 +161,25 @@ async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[
     throw new Error("ai_not_configured");
   }
 
-  const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
-  if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
-  if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
-  if (!res.ok) { const txt = await res.text(); console.error("AI request error", res.status, txt); throw new Error("ai_error"); }
-  return res.json();
+  // Gemini can temporarily return 503 during demand spikes. Retry a couple of times
+  // before failing the user request, with a short exponential backoff.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
+    if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
+    if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
+    if (res.ok) return res.json();
+
+    const txt = await res.text();
+    const retryable = res.status === 502 || res.status === 503 || res.status === 504;
+    if (retryable && attempt < 2) {
+      console.warn("AI temporary error, retrying", res.status, attempt + 1);
+      await new Promise((resolve) => setTimeout(resolve, 700 * 2 ** attempt));
+      continue;
+    }
+    console.error("AI request error", res.status, txt);
+    throw new Error("ai_error");
+  }
+  throw new Error("ai_error");
 }
 
 export const analyzePage = createServerFn({ method: "POST" })
@@ -219,7 +233,7 @@ export const generateMockup = createServerFn({ method: "POST" })
     let originalImages: string[] = [];
     try {
       const { html: originalHtml, finalUrl } = await fetchPage(row.url_submitted);
-      originalSnippet = stripHtmlForLLM(originalHtml).slice(0, 24_000);
+      originalSnippet = stripHtmlForLLM(originalHtml).slice(0, 14_000);
       const origin = new URL(finalUrl).origin;
       const imgMatches = Array.from(originalHtml.matchAll(/<img[^>]+src=["']([^"']+)["']/gi));
       const seen = new Set<string>();
@@ -229,7 +243,7 @@ export const generateMockup = createServerFn({ method: "POST" })
         if (src.startsWith("//")) src = "https:" + src;
         else if (src.startsWith("/")) src = origin + src;
         else if (!/^https?:\/\//i.test(src)) continue;
-        if (!seen.has(src)) { seen.add(src); originalImages.push(src); if (originalImages.length >= 12) break; }
+        if (!seen.has(src)) { seen.add(src); originalImages.push(src); if (originalImages.length >= 6) break; }
       }
     } catch (e) { console.warn("re-fetch for mockup failed", e); }
 
@@ -318,7 +332,7 @@ SOURCE IMAGES — use only those that genuinely fit:
 ${originalImages.map((u, i) => `${i + 1}. ${u}`).join("\n") || "(No usable images extracted.)"}
 
 HERO AUDIT — THIS IS THE STRATEGIC BRIEF:
-${JSON.stringify(audit, null, 2).slice(0, 10000)}
+${JSON.stringify(audit, null, 2).slice(0, 7000)}
 
 ORIGINAL PAGE CONTENT — use this to understand the real business, offer, audience, voice and factual claims:
 ${originalSnippet}
@@ -326,7 +340,7 @@ ${originalSnippet}
 DELIVERABLE:
 Create the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
 
-    const aiRes = await callAI(system, user, undefined, undefined, 16000);
+    const aiRes = await callAI(system, user, undefined, undefined, 10000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) throw new Error("invalid_mockup");
