@@ -86,7 +86,7 @@ function stripHtmlForLLM(html: string): string {
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return cleaned.slice(0, 40_000);
+  return cleaned.slice(0, 20_000);
 }
 
 const auditTool = {
@@ -163,7 +163,7 @@ async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[
 
   // Gemini can temporarily return 503 during demand spikes. Retry a couple of times
   // before failing the user request, with a short exponential backoff.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
     if (res.status === 429) { const e = new Error("rate_limit"); (e as Error & { code?: string }).code = "rate_limit"; throw e; }
     if (res.status === 402) { const e = new Error("credits"); (e as Error & { code?: string }).code = "credits"; throw e; }
@@ -171,7 +171,7 @@ async function callAI(systemPrompt: string, userPrompt: string, tools?: unknown[
 
     const txt = await res.text();
     const retryable = res.status === 502 || res.status === 503 || res.status === 504;
-    if (retryable && attempt < 2) {
+    if (retryable && attempt < 1) {
       console.warn("AI temporary error, retrying", res.status, attempt + 1);
       await new Promise((resolve) => setTimeout(resolve, 700 * 2 ** attempt));
       continue;
@@ -207,7 +207,7 @@ Scoring rubric (0-100):
 Be brutally honest but constructive. Quote concrete improvements. Extract brand colors from the HTML when possible.
 
 ${langInstr}`;
-    const aiRes = await callAI(system, `URL: ${finalUrl}\n\nHTML (truncated):\n${cleaned}`, [auditTool], { type: "function", function: { name: "submit_funnel_audit" } }, 6000);
+    const aiRes = await callAI(system, `URL: ${finalUrl}\n\nHTML (truncated):\n${cleaned}`, [auditTool], { type: "function", function: { name: "submit_funnel_audit" } }, 4500);
     const toolCall = aiRes?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) throw new Error("ai_invalid_response");
     let audit: AuditJson;
