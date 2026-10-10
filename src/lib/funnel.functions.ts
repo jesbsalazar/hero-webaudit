@@ -343,8 +343,26 @@ Create the redesigned landing page now. The most important improvement should be
     const aiRes = await callAI(system, user, undefined, undefined, 7000);
     let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
-    if (!html.toLowerCase().includes("<html") && !html.toLowerCase().includes("<!doctype")) throw new Error("invalid_mockup");
-    if (html.length > 140_000) html = html.slice(0, 140_000);
+    const lowerHtml = html.toLowerCase();
+    if (!lowerHtml.includes("<html") && !lowerHtml.includes("<!doctype")) throw new Error("invalid_mockup");
+    // Never persist a truncated or effectively empty document; it renders as a blank white iframe.
+    if (!lowerHtml.includes("</html>") || !lowerHtml.includes("<body") || !lowerHtml.includes("</body>")) {
+      console.error("Mockup HTML is incomplete", { length: html.length, hasBody: lowerHtml.includes("<body"), hasClosingHtml: lowerHtml.includes("</html>") });
+      throw new Error("invalid_mockup");
+    }
+    const visibleText = html
+      .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+      .replace(/<head[\\s\\S]*?<\\/head>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;|&#160;/gi, " ")
+      .replace(/&[a-z]+;|&#\\d+;/gi, " ")
+      .replace(/\\s+/g, " ")
+      .trim();
+    if (visibleText.length < 120) {
+      console.error("Mockup HTML has insufficient visible content", { length: html.length, visibleTextLength: visibleText.length });
+      throw new Error("invalid_mockup");
+    }
+    if (html.length > 140_000) throw new Error("invalid_mockup_too_large");
 
     const { error: updateError } = await supabaseAdmin.from("funnel_audits").update({ mockup_html: html }).eq("id", data.id);
     if (updateError) { console.error("Mockup DB update error", updateError); throw new Error("db_error"); }
