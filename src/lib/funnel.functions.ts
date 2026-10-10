@@ -351,12 +351,12 @@ Create the redesigned landing page now. The most important improvement should be
       throw new Error("invalid_mockup");
     }
     const visibleText = html
-      .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
-      .replace(/<head[\\s\\S]*?<\\/head>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<head[\s\S]*?<\/head>/gi, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;|&#160;/gi, " ")
       .replace(/&[a-z]+;|&#\\d+;/gi, " ")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
     if (visibleText.length < 120) {
       console.error("Mockup HTML has insufficient visible content", { length: html.length, visibleTextLength: visibleText.length });
