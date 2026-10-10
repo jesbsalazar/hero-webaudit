@@ -384,10 +384,32 @@ function HomePage() {
 
               {/* Mockup preview */}
               <div className="overflow-hidden rounded-2xl border border-gold/30 bg-panel">
-                <div className="flex items-center justify-between border-b border-border/40 px-5 py-3">
+                <div className="flex flex-col gap-3 border-b border-border/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <h3 className="text-sm font-semibold text-gold uppercase tracking-wider">
                     {t("mockup_title")}
                   </h3>
+                  {mockupHtml && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const blob = new Blob([mockupHtml], { type: "text/html;charset=utf-8" });
+                        const objectUrl = URL.createObjectURL(blob);
+                        const link = document.createElement("a");
+                        link.href = objectUrl;
+                        link.download = `hero-os-mockup-${(auditId || "landing").slice(0, 8)}.html`;
+                        link.rel = "noopener";
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Descargar HTML
+                    </Button>
+                  )}
                 </div>
                 <div className="relative h-[520px]">
                   {mockupHtml ? (
@@ -396,6 +418,7 @@ function HomePage() {
                       srcDoc={mockupHtml}
                       className="h-full w-full bg-white"
                       sandbox="allow-same-origin"
+                      referrerPolicy="no-referrer"
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
