@@ -114,6 +114,7 @@ function HomePage() {
   const [auditId, setAuditId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditJson | null>(null);
   const [mockupHtml, setMockupHtml] = useState<string | null>(null);
+  const [mockupFailed, setMockupFailed] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -171,9 +172,13 @@ function HomePage() {
       setAudit(res.audit);
       // Kick off mockup generation in parallel using the detected page language.
       mockup({ data: { id: res.id, language: detectedLanguage } })
-        .then((m) => setMockupHtml(m.html))
-        .catch(() => {
-          /* mockup is bonus — silent fail */
+        .then((m) => {
+          setMockupHtml(m.html);
+          setMockupFailed(false);
+        })
+        .catch((error) => {
+          console.error("Mockup generation failed", error);
+          setMockupFailed(true);
         });
       setTimeout(() => setPhase("report"), 600);
     } catch (err) {
@@ -248,6 +253,7 @@ function HomePage() {
     setAuditId(null);
     setAudit(null);
     setMockupHtml(null);
+    setMockupFailed(false);
     setForm({ first_name: "", last_name: "", email: "" });
     setBooked(false);
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -420,6 +426,13 @@ function HomePage() {
                       sandbox="allow-same-origin"
                       referrerPolicy="no-referrer"
                     />
+                  ) : mockupFailed ? (
+                    <div className="flex h-full items-center justify-center p-6 text-muted-foreground">
+                      <div className="max-w-md text-center">
+                        <p className="mb-2 font-semibold">No se pudo generar la vista previa.</p>
+                        <p className="text-sm">El audit está disponible. Intenta generar la landing nuevamente más tarde.</p>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex h-full items-center justify-center text-muted-foreground">
                       <div className="text-center">
