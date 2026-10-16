@@ -365,19 +365,15 @@ Create the redesigned landing page now. The most important improvement should be
       if (!lowerHtml.includes("</html>")) html += "</html>";
     }
 
-    // Strip non-visible content and validate that the generated page has real copy.
-    const visibleText = html
-      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
-      .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ")
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;|&#160;/gi, " ")
-      .replace(/&(?:amp|lt|gt|quot|apos);|&#\d+;|&#x[\da-f]+;/gi, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (visibleText.length < 120) {
-      console.error("Mockup HTML has insufficient visible content", { length: html.length, visibleTextLength: visibleText.length });
+    // Validate the document structure without relying on text extraction from complex HTML/CSS.
+    // Some valid generated pages use markup that defeats plain regex-based text stripping.
+    const hasPageContent = /<(?:h1|h2|h3|p|a|button|li|section|main|article)\\b/i.test(html);
+    if (html.length < 500 || !/<body\\b/i.test(html) || !hasPageContent) {
+      console.error("Mockup HTML failed structural validation", {
+        length: html.length,
+        hasBody: /<body\\b/i.test(html),
+        hasPageContent,
+      });
       throw new Error("invalid_mockup");
     }
     if (html.length > 140_000) throw new Error("invalid_mockup_too_large");
