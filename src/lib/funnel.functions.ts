@@ -365,16 +365,20 @@ Create the redesigned landing page now. The most important improvement should be
       if (!lowerHtml.includes("</html>")) html += "</html>";
     }
 
+    // Validate actual copy while tolerating valid HTML that uses unusual formatting.
     const visibleText = html
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<head[\s\S]*?<\/head>/gi, " ")
+      .replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi, " ")
+      .replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi, " ")
+      .replace(/<head\\b[^>]*>[\\s\\S]*?<\\/head>/gi, " ")
+      .replace(/<!--[\\s\\S]*?-->/g, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;|&#160;/gi, " ")
-      .replace(/&[a-z]+;|&#\d+;/gi, " ")
-      .replace(/\s+/g, " ")
+      .replace(/&(?:amp|lt|gt|quot|apos);|&#\\d+;|&#x[\\da-f]+;/gi, " ")
+      .replace(/\\s+/g, " ")
       .trim();
-    if (visibleText.length < 120) {
-      console.error("Mockup HTML has insufficient visible content", { length: html.length, visibleTextLength: visibleText.length });
+    const hasCopyElements = /<(?:h1|h2|h3|p|a|button|li|summary)\\b[^>]*>\\s*[^<\\s][\\s\\S]*?<\\/(?:h1|h2|h3|p|a|button|li|summary)>/i.test(html);
+    if (visibleText.length < 120 && !hasCopyElements) {
+      console.error("Mockup HTML has insufficient visible content", { length: html.length, visibleTextLength: visibleText.length, hasCopyElements });
       throw new Error("invalid_mockup");
     }
     if (html.length > 140_000) throw new Error("invalid_mockup_too_large");
