@@ -359,7 +359,7 @@ Create the redesigned landing page now. The most important improvement should be
         .replace(/<\/head\s*>/gi, "")
         .trim();
       pageContent = pageContent.replace(/<\/body\s*>/gi, "");
-      html = \`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\${headContent}</head><body>\${pageContent}</body></html>\`;
+      html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${headContent}</head><body>${pageContent}</body></html>`;
     } else {
       if (!lowerHtml.includes("</body>")) html += "</body>";
       if (!lowerHtml.includes("</html>")) html += "</html>";
