@@ -345,17 +345,32 @@ Create the redesigned landing page now. The most important improvement should be
     html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
     const lowerHtml = html.toLowerCase();
     if (!lowerHtml.includes("<html") && !lowerHtml.includes("<!doctype")) throw new Error("invalid_mockup");
-    // Never persist a truncated or effectively empty document; it renders as a blank white iframe.
-    if (!lowerHtml.includes("</html>") || !lowerHtml.includes("<body") || !lowerHtml.includes("</body>")) {
-      console.error("Mockup HTML is incomplete", { length: html.length, hasBody: lowerHtml.includes("<body"), hasClosingHtml: lowerHtml.includes("</html>") });
-      throw new Error("invalid_mockup");
+
+    // Gemini can return useful page markup while omitting document/body wrappers.
+    // Normalize the HTML so the preview and download receive a complete document.
+    if (!lowerHtml.includes("<body")) {
+      const headMatch = html.match(/<head\b[^>]*>([\s\S]*?)(?:<\/head>|$)/i);
+      const headContent = headMatch?.[1] ?? "";
+      let pageContent = html
+        .replace(/<!doctype[^>]*>/gi, "")
+        .replace(/<html\b[^>]*>/gi, "")
+        .replace(/<\/html\s*>/gi, "")
+        .replace(/<head\b[^>]*>[\s\S]*?(?:<\/head>|$)/i, "")
+        .replace(/<\/head\s*>/gi, "")
+        .trim();
+      pageContent = pageContent.replace(/<\/body\s*>/gi, "");
+      html = \`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">\${headContent}</head><body>\${pageContent}</body></html>\`;
+    } else {
+      if (!lowerHtml.includes("</body>")) html += "</body>";
+      if (!lowerHtml.includes("</html>")) html += "</html>";
     }
+
     const visibleText = html
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
       .replace(/<head[\s\S]*?<\/head>/gi, " ")
       .replace(/<[^>]+>/g, " ")
       .replace(/&nbsp;|&#160;/gi, " ")
-      .replace(/&[a-z]+;|&#\\d+;/gi, " ")
+      .replace(/&[a-z]+;|&#\d+;/gi, " ")
       .replace(/\s+/g, " ")
       .trim();
     if (visibleText.length < 120) {
