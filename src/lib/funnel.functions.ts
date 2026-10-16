@@ -367,11 +367,11 @@ Create the redesigned landing page now. The most important improvement should be
 
     // Validate the document structure without relying on text extraction from complex HTML/CSS.
     // Some valid generated pages use markup that defeats plain regex-based text stripping.
-    const hasPageContent = /<(?:h1|h2|h3|p|a|button|li|section|main|article)\\b/i.test(html);
-    if (html.length < 500 || !/<body\\b/i.test(html) || !hasPageContent) {
+    const hasPageContent = /<(?:h1|h2|h3|p|a|button|li|section|main|article)\b/i.test(html);
+    if (html.length < 500 || !/<body\b/i.test(html) || !hasPageContent) {
       console.error("Mockup HTML failed structural validation", {
         length: html.length,
-        hasBody: /<body\\b/i.test(html),
+        hasBody: /<body\b/i.test(html),
         hasPageContent,
       });
       throw new Error("invalid_mockup");
