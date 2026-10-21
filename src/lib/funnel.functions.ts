@@ -340,11 +340,30 @@ ${originalSnippet}
 DELIVERABLE:
 Create the redesigned landing page now. The most important improvement should be obvious in the first screen: clearer positioning, stronger message, stronger offer framing and a compelling next action. Make it look like a credible redesign that a CRO agency would show a client — polished, focused and persuasive, not over-engineered.`;
 
-    const aiRes = await callAI(system, user, undefined, undefined, 7000);
-    let html: string = aiRes?.choices?.[0]?.message?.content ?? "";
-    html = html.replace(/^```html\s*/i, "").replace(/```\s*$/i, "").trim();
-    const lowerHtml = html.toLowerCase();
-    if (!lowerHtml.includes("<html") && !lowerHtml.includes("<!doctype")) throw new Error("invalid_mockup");
+    const aiRes = await callAI(system, user, undefined, undefined, 32000);
+    const rawContent = aiRes?.choices?.[0]?.message?.content;
+    let html: string = Array.isArray(rawContent)
+      ? rawContent.map((p: { text?: string }) => p?.text ?? "").join("")
+      : typeof rawContent === "string" ? rawContent : "";
+    console.log("Mockup AI finish", aiRes?.choices?.[0]?.finish_reason, "len", html.length);
+    // Strip markdown fences / commentary around the document.
+    const fence = html.match(/```(?:html)?\s*([\s\S]*?)(?:```|$)/i);
+    if (fence && /<(?:!doctype|html|body|section)/i.test(fence[1])) html = fence[1];
+    const startIdx = html.search(/<!doctype|<html\b/i);
+    if (startIdx > 0) html = html.slice(startIdx);
+    html = html.trim();
+    // If the output was truncated, close any open style block.
+    if (/<style\b/i.test(html) && (html.match(/<style\b/gi)?.length ?? 0) > (html.match(/<\/style>/gi)?.length ?? 0)) html += "</style>";
+    let lowerHtml = html.toLowerCase();
+    if (!lowerHtml.includes("<html") && !lowerHtml.includes("<!doctype")) {
+      if (/<(?:body|section|main|header|h1)\b/i.test(html)) {
+        html = `<!doctype html><html lang="${data.language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>${/<body\b/i.test(html) ? html : `<body>${html}</body>`}</html>`;
+        lowerHtml = html.toLowerCase();
+      } else {
+        console.error("Mockup invalid output", html.slice(0, 300));
+        throw new Error("invalid_mockup");
+      }
+    }
 
     // Gemini can return useful page markup while omitting document/body wrappers.
     // Normalize the HTML so the preview and download receive a complete document.
@@ -376,7 +395,7 @@ Create the redesigned landing page now. The most important improvement should be
       });
       throw new Error("invalid_mockup");
     }
-    if (html.length > 140_000) throw new Error("invalid_mockup_too_large");
+    if (html.length > 400_000) throw new Error("invalid_mockup_too_large");
 
     const { error: updateError } = await supabaseAdmin.from("funnel_audits").update({ mockup_html: html }).eq("id", data.id);
     if (updateError) { console.error("Mockup DB update error", updateError); throw new Error("db_error"); }
