@@ -395,7 +395,7 @@ Create the redesigned landing page now. The most important improvement should be
       });
       throw new Error("invalid_mockup");
     }
-    if (html.length > 140_000) throw new Error("invalid_mockup_too_large");
+    if (html.length > 400_000) throw new Error("invalid_mockup_too_large");
 
     const { error: updateError } = await supabaseAdmin.from("funnel_audits").update({ mockup_html: html }).eq("id", data.id);
     if (updateError) { console.error("Mockup DB update error", updateError); throw new Error("db_error"); }
