@@ -2,11 +2,23 @@ import { Link } from "@tanstack/react-router";
 import { useT } from "@/lib/i18n";
 import { landing } from "@/components/landing/content";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 import logo from "@/assets/hero-os-logo.png";
 
 export function Navbar() {
   const { lang, setLang } = useT();
   const L = landing[lang];
+  const [dark, setDark] = useState(true);
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+  const toggleTheme = () => {
+    const next = !dark;
+    setDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    try { localStorage.setItem("theme", next ? "dark" : "light"); } catch {}
+  };
 
   const scrollTo = (id: string) => () => {
     if (typeof document === "undefined") return;
@@ -35,6 +47,13 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-panel text-muted-foreground transition hover:text-foreground"
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           <div className="flex items-center gap-1 rounded-full border border-border/60 bg-panel p-1">
             {(["en", "es"] as const).map((l) => (
               <button
