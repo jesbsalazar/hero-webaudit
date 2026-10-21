@@ -40,6 +40,36 @@
 
 :root {
   --radius: 0.75rem;
+  /* HERO OS palette — clear */
+  --background: oklch(0.985 0.005 250);
+  --foreground: oklch(0.2 0.04 260);
+  --panel: oklch(0.96 0.01 250);
+  --panel-elevated: oklch(1 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.04 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.04 260);
+  --primary: oklch(0.55 0.2 255);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.94 0.015 250);
+  --secondary-foreground: oklch(0.2 0.04 260);
+  --muted: oklch(0.94 0.012 250);
+  --muted-foreground: oklch(0.45 0.03 255);
+  --accent: oklch(0.92 0.02 250);
+  --accent-foreground: oklch(0.2 0.04 260);
+  --gold: oklch(0.68 0.13 80);
+  --gold-foreground: oklch(0.18 0.04 260);
+  --success: oklch(0.6 0.17 150);
+  --warning: oklch(0.7 0.16 60);
+  --danger: oklch(0.58 0.22 25);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.2 0.04 260 / 12%);
+  --input: oklch(0.2 0.04 260 / 14%);
+  --ring: oklch(0.55 0.2 255);
+}
+
+.dark {
   /* HERO OS palette — dark by default */
   --background: oklch(0.18 0.04 260);          /* #0A1628 navy */
   --foreground: oklch(0.97 0.01 250);
@@ -67,12 +97,6 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.7 0.18 250);
-}
-
-.dark {
-  /* same — already dark */
-  --background: oklch(0.18 0.04 260);
-  --foreground: oklch(0.97 0.01 250);
 }
 
 @layer base {
